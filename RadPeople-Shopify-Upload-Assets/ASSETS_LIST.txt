@@ -1,0 +1,16 @@
+RadPeople Shopify Theme - Additional Assets to Upload
+======================================================
+
+VIDEOS (Required for Homepage)
+-------------------------------
+1. radpeople-landingPage.mp4 (64MB) - Desktop homepage video
+2. landingVideo-mobile.mp4 (64MB) - Mobile homepage video
+
+Total Size: ~128MB
+
+UPLOAD LOCATION:
+- Shopify Admin → Content → Files
+
+USAGE:
+- Update URLs in templates/index.liquid after uploading
+

@@ -1,0 +1,73 @@
+{% comment %}
+  Details Dropdown Component
+  Usage: {% render 'details-dropdown', title: 'Title', content: 'Content' %}
+{% endcomment %}
+
+<div class="details-dropdown">
+  <button type="button" class="details-dropdown-toggle" onclick="toggleDropdown(this)">
+    {{ title }}
+    <span class="dropdown-arrow">+</span>
+  </button>
+  <div class="details-dropdown-content">
+    {{ content }}
+  </div>
+</div>
+
+<style>
+  .details-dropdown {
+    border-bottom: 1px solid #e0e0e0;
+    margin-bottom: 15px;
+  }
+
+  .details-dropdown-toggle {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 1rem;
+    text-transform: uppercase;
+    color: #000000;
+    text-align: left;
+  }
+
+  .details-dropdown-toggle:hover {
+    color: #1404FB;
+  }
+
+  .dropdown-arrow {
+    font-size: 1.5rem;
+    transition: transform 0.3s ease;
+  }
+
+  .details-dropdown.open .dropdown-arrow {
+    transform: rotate(45deg);
+  }
+
+  .details-dropdown-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    padding: 0 0 15px 0;
+    font-family: 'Sequel Sans Regular', sans-serif;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: #000000;
+  }
+
+  .details-dropdown.open .details-dropdown-content {
+    max-height: 500px;
+  }
+</style>
+
+<script>
+  function toggleDropdown(button) {
+    const dropdown = button.closest('.details-dropdown');
+    dropdown.classList.toggle('open');
+  }
+</script>
+

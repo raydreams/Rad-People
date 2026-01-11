@@ -1,0 +1,53 @@
+{% comment %}
+  Events Page Component
+  Note: This will need to be populated with Shopify metafields or a custom collection
+{% endcomment %}
+
+<div class="events-container">
+  <div class="events-upcoming">
+    <h2 class="events-title" style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1.5rem; text-transform: uppercase;">
+      UPCOMING EVENTS
+    </h2>
+    {% comment %} Events can be added via metafields or a custom section {% endcomment %}
+    <div class="events-list">
+      <p>Events will be displayed here. Use Shopify metafields or a custom section to add events.</p>
+    </div>
+  </div>
+
+  <div class="events-past">
+    <h2 class="events-title" style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1.5rem; text-transform: uppercase;">
+      PAST EVENTS
+    </h2>
+    <div class="events-list">
+      <p>Past events will be displayed here.</p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .events-container {
+    padding: 40px 20px;
+    min-height: calc(100vh - 40px);
+    background-color: white;
+  }
+
+  .events-title {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 1.5rem;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    color: black;
+  }
+
+  .events-list {
+    font-family: 'Sequel Sans Regular', sans-serif;
+    color: black;
+    line-height: 1.6;
+  }
+
+  .events-upcoming,
+  .events-past {
+    margin-bottom: 40px;
+  }
+</style>
+

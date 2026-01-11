@@ -1,0 +1,8 @@
+# Shopify theme files
+node_modules/
+.DS_Store
+*.log
+
+# Local development
+.shopify/
+
