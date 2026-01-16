@@ -6,6 +6,192 @@
     "theme_author": "RadPeople",
     "theme_documentation_url": "",
     "theme_support_url": ""
+  },
+  {
+    "name": "Homepage Videos",
+    "settings": [
+      {
+        "type": "text",
+        "id": "homepage_video_desktop",
+        "label": "Desktop Video URL",
+        "info": "URL to the desktop landing page video. Get this from Content -> Files after uploading.",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "homepage_video_mobile",
+        "label": "Mobile Video URL",
+        "info": "URL to the mobile landing page video. Get this from Content -> Files after uploading.",
+        "default": ""
+      }
+    ]
+  },
+  {
+    "name": "Cart",
+    "settings": [
+      {
+        "type": "select",
+        "id": "cart_type",
+        "label": "Cart type",
+        "options": [
+          {
+            "value": "drawer",
+            "label": "Drawer"
+          },
+          {
+            "value": "notification",
+            "label": "Notification"
+          }
+        ],
+        "default": "drawer"
+      }
+    ]
+  },
+  {
+    "name": "Favicon",
+    "settings": [
+      {
+        "type": "image_picker",
+        "id": "favicon",
+        "label": "Favicon",
+        "info": "Upload a favicon image (recommended: 32x32 or 64x64 pixels, PNG or ICO format)"
+      }
+    ]
+  },
+  {
+    "name": "Typography",
+    "settings": [
+      {
+        "type": "font_picker",
+        "id": "type_header_font",
+        "label": "Heading font",
+        "default": "assistant_n4"
+      },
+      {
+        "type": "font_picker",
+        "id": "type_body_font",
+        "label": "Body font",
+        "default": "assistant_n4"
+      }
+    ]
+  },
+  {
+    "name": "Colors",
+    "settings": [
+      {
+        "type": "color",
+        "id": "colors_accent_1",
+        "label": "Accent 1",
+        "default": "#1404FB"
+      }
+    ]
+  },
+  {
+    "name": "Announcement Bar",
+    "settings": [
+      {
+        "type": "checkbox",
+        "id": "announcement_bar_enabled",
+        "label": "Enable announcement bar",
+        "default": false
+      },
+      {
+        "type": "text",
+        "id": "announcement_bar_text",
+        "label": "Announcement text",
+        "default": "Welcome to RADPEOPLE"
+      }
+    ]
+  },
+  {
+    "name": "Footer",
+    "settings": [
+      {
+        "type": "textarea",
+        "id": "footer_tagline",
+        "label": "Footer tagline",
+        "info": "Text displayed under RADPEOPLE logo",
+        "default": "Express yourself, live creatively. Unique art and prints designed to inspire and transform your space."
+      },
+      {
+        "type": "text",
+        "id": "footer_contact_address",
+        "label": "Contact address",
+        "info": "Physical address or location"
+      },
+      {
+        "type": "text",
+        "id": "footer_contact_email",
+        "label": "Contact email",
+        "info": "Email address for 'Get in touch' link",
+        "default": "contact@radpeople.us"
+      }
+    ]
+  },
+  {
+    "name": "Social Media",
+    "settings": [
+      {
+        "type": "text",
+        "id": "social_instagram",
+        "label": "Instagram URL"
+      },
+      {
+        "type": "text",
+        "id": "social_facebook",
+        "label": "Facebook URL"
+      },
+      {
+        "type": "text",
+        "id": "social_twitter",
+        "label": "X (Twitter) URL"
+      },
+      {
+        "type": "text",
+        "id": "social_email",
+        "label": "Email address",
+        "info": "For email link in social section"
+      }
+    ]
+  },
+  {
+    "name": "Contentful CMS",
+    "settings": [
+      {
+        "type": "paragraph",
+        "content": "Configure Contentful API to automatically fetch content. Leave blank to use manual content."
+      },
+      {
+        "type": "text",
+        "id": "contentful_space_id",
+        "label": "Contentful Space ID",
+        "info": "Get this from your Contentful space settings"
+      },
+      {
+        "type": "text",
+        "id": "contentful_access_token",
+        "label": "Contentful Access Token",
+        "info": "Get this from Contentful API keys (Content Delivery API)"
+      }
+    ]
+  },
+  {
+    "name": "Password Page",
+    "settings": [
+      {
+        "type": "text",
+        "id": "password_countdown_date",
+        "label": "Next Drop Date & Time",
+        "info": "Enter date and time for countdown (format: YYYY-MM-DD HH:MM, e.g., 2024-12-25 12:00)",
+        "default": ""
+      },
+      {
+        "type": "text",
+        "id": "password_countdown_message",
+        "label": "Countdown Message",
+        "info": "Message to display with countdown (e.g., 'Next Drop In')",
+        "default": "NEXT DROP IN"
+      }
+    ]
   }
 ]
-

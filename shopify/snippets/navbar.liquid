@@ -9,9 +9,22 @@
       <a href="{{ pages.gallery.url }}" class="navbar-link {% if request.page_type == 'page' and page.handle == 'gallery' %}active{% endif %}">
         GALLERY
       </a>
-      <a href="{{ routes.collections_url }}" class="navbar-link {% if request.page_type == 'collection' or request.page_type == 'product' %}active{% endif %}">
-        SHOP
-      </a>
+      {% comment %} Automatically use 'all' collection (Shopify's built-in collection with all products) {% endcomment %}
+      {% if collections.all %}
+        <a href="{{ collections.all.url }}" class="navbar-link {% if request.page_type == 'collection' or request.page_type == 'product' %}active{% endif %}">
+          SHOP
+        </a>
+      {% elsif shop.collections.size > 0 %}
+        {% comment %} Fallback to first collection if 'all' doesn't exist {% endcomment %}
+        <a href="{{ shop.collections.first.url }}" class="navbar-link {% if request.page_type == 'collection' or request.page_type == 'product' %}active{% endif %}">
+          SHOP
+        </a>
+      {% else %}
+        {% comment %} Fallback to collections index if no collections exist {% endcomment %}
+        <a href="{{ routes.collections_url }}" class="navbar-link {% if request.page_type == 'collection' or request.page_type == 'product' %}active{% endif %}">
+          SHOP
+        </a>
+      {% endif %}
       <a href="{{ pages.events.url }}" class="navbar-link {% if request.page_type == 'page' and page.handle == 'events' %}active{% endif %}">
         EVENTS
       </a>
@@ -55,10 +68,25 @@
         <span>GALLERY</span>
         <span class="mobile-menu-icon">→</span>
       </a>
-      <a href="{{ routes.collections_url }}" class="mobile-menu-link">
-        <span>SHOP</span>
-        <span class="mobile-menu-icon">→</span>
-      </a>
+      {% comment %} Automatically use 'all' collection (Shopify's built-in collection with all products) {% endcomment %}
+      {% if collections.all %}
+        <a href="{{ collections.all.url }}" class="mobile-menu-link">
+          <span>SHOP</span>
+          <span class="mobile-menu-icon">→</span>
+        </a>
+      {% elsif shop.collections.size > 0 %}
+        {% comment %} Fallback to first collection if 'all' doesn't exist {% endcomment %}
+        <a href="{{ shop.collections.first.url }}" class="mobile-menu-link">
+          <span>SHOP</span>
+          <span class="mobile-menu-icon">→</span>
+        </a>
+      {% else %}
+        {% comment %} Fallback to collections index if no collections exist {% endcomment %}
+        <a href="{{ routes.collections_url }}" class="mobile-menu-link">
+          <span>SHOP</span>
+          <span class="mobile-menu-icon">→</span>
+        </a>
+      {% endif %}
       <a href="{{ pages.events.url }}" class="mobile-menu-link">
         <span>EVENTS</span>
         <span class="mobile-menu-icon">→</span>

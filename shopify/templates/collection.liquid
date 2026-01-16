@@ -1,27 +1,29 @@
 {% comment %}
   Collection template - Product List
+  Matches exact functionality from React ProductList
 {% endcomment %}
 
-<div class="product-list-container">
+{% if collection %}
+<div class="product-list-container" style="position: relative; top: 40px;">
   <div class="filter-menu">
-    <div class="filter-controls">
-      {% comment %} View Grid Controls - Desktop Only {% endcomment %}
-      {% if collection.products_count > 0 %}
-        <div class="view-controls" style="position: relative;">
-          <button type="button" class="grid-button" onclick="toggleViewModal()">
-            View By (<span id="activeGrid">4</span>)
-          </button>
-          <div class="view-modal" id="viewModal">
-            <button type="button" class="modal-button" data-columns="2" onclick="setGridColumns(2)">2</button>
-            <button type="button" class="modal-button active" data-columns="4" onclick="setGridColumns(4)">4</button>
-            <button type="button" class="modal-button" data-columns="8" onclick="setGridColumns(8)">8</button>
-          </div>
+    {% comment %} View Grid Controls - Desktop Only {% endcomment %}
+    {% if collection.products_count > 0 %}
+      <div class="view-controls" id="viewControls" style="position: relative;">
+        <button type="button" class="grid-button" onclick="toggleViewModal()">
+          View By (<span id="activeGrid">4</span>)
+        </button>
+        <div class="view-modal" id="viewModal">
+          <button type="button" class="modal-button" data-columns="2" onclick="setGridColumns(2)">2</button>
+          <button type="button" class="modal-button active" data-columns="4" onclick="setGridColumns(4)">4</button>
+          <button type="button" class="modal-button" data-columns="8" onclick="setGridColumns(8)">8</button>
         </div>
-      {% endif %}
-    </div>
+      </div>
+    {% else %}
+      <div></div>
+    {% endif %}
 
     {% comment %} Sort Controls {% endcomment %}
-    <div class="sort-controls" style="position: relative;">
+    <div class="sort-controls" id="sortControls" style="position: relative;">
       <button type="button" class="sort-button" onclick="toggleSortModal()">
         Sort By
       </button>
@@ -37,7 +39,7 @@
   {% if collection.products_count > 0 %}
     <div class="product-grid" id="productGrid" data-columns="4">
       {% for product in collection.products %}
-        <a href="{{ product.url }}" class="product-link">
+        <a href="{{ product.url }}" class="product-link" data-product-id="{{ product.id }}" data-product-price="{{ product.price }}">
           <div class="product-card">
             <div class="image-wrapper">
               {% if product.featured_image %}
@@ -53,7 +55,7 @@
                 {{ 'product-1' | placeholder_svg_tag: 'product-image' }}
               {% endif %}
             </div>
-            <div class="product-details">
+            <div class="product-details" id="productDetails-{{ forloop.index0 }}">
               <span class="product-name">{{ product.title }}</span>
               <span class="product-price">${{ product.price | money_without_currency }}</span>
             </div>
@@ -62,8 +64,16 @@
       {% endfor %}
     </div>
   {% else %}
-    <div style="padding: 40px; text-align: center;">
-      <p>No products found in this collection.</p>
+    <div style="padding: 100px 40px; text-align: center; min-height: calc(100vh - 140px);">
+      <h2 style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 1.5rem; margin-bottom: 1rem; text-transform: uppercase;">
+        No Products Yet
+      </h2>
+      <p style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 1rem; color: #666;">
+        Products will appear here once you add them to your collection.
+      </p>
+      <p style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 0.9rem; color: #999; margin-top: 1rem;">
+        Go to <strong>Products → Add product</strong> in your Shopify admin to get started.
+      </p>
     </div>
   {% endif %}
 </div>
@@ -74,12 +84,19 @@
   let activeGrid = 4;
   let currentSort = 'date-new';
   let products = Array.from(document.querySelectorAll('.product-link'));
+  let isViewModalOpen = false;
+  let isSortModalOpen = false;
 
   function setGridColumns(columns) {
     activeGrid = columns;
     const grid = document.getElementById('productGrid');
+    if (!grid) return;
+    
     grid.setAttribute('data-columns', columns);
-    document.getElementById('activeGrid').textContent = columns;
+    const activeGridSpan = document.getElementById('activeGrid');
+    if (activeGridSpan) {
+      activeGridSpan.textContent = columns;
+    }
     
     // Update active button
     document.querySelectorAll('.view-modal .modal-button').forEach(btn => {
@@ -89,76 +106,159 @@
       }
     });
     
+    // Hide product details when grid is 8 columns
+    document.querySelectorAll('.product-details').forEach((details, idx) => {
+      if (columns === 8) {
+        details.style.display = 'none';
+        const imageWrapper = details.previousElementSibling;
+        if (imageWrapper) {
+          imageWrapper.style.height = '100%';
+        }
+      } else {
+        details.style.display = 'flex';
+        const imageWrapper = details.previousElementSibling;
+        if (imageWrapper) {
+          imageWrapper.style.height = 'calc(100% - 26px)';
+        }
+      }
+    });
+    
     toggleViewModal();
   }
 
   function toggleViewModal() {
+    isViewModalOpen = !isViewModalOpen;
     const modal = document.getElementById('viewModal');
-    modal.classList.toggle('open');
+    if (modal) {
+      modal.classList.toggle('open', isViewModalOpen);
+    }
     
     // Close sort modal if open
-    document.getElementById('sortModal').classList.remove('open');
+    if (isViewModalOpen) {
+      isSortModalOpen = false;
+      const sortModal = document.getElementById('sortModal');
+      if (sortModal) {
+        sortModal.classList.remove('open');
+      }
+    }
   }
 
   function toggleSortModal() {
+    isSortModalOpen = !isSortModalOpen;
     const modal = document.getElementById('sortModal');
-    modal.classList.toggle('open');
+    if (modal) {
+      modal.classList.toggle('open', isSortModalOpen);
+    }
     
     // Close view modal if open
-    document.getElementById('viewModal').classList.remove('open');
+    if (isSortModalOpen) {
+      isViewModalOpen = false;
+      const viewModal = document.getElementById('viewModal');
+      if (viewModal) {
+        viewModal.classList.remove('open');
+      }
+    }
   }
 
   function sortProducts(sortType) {
     currentSort = sortType;
     const grid = document.getElementById('productGrid');
+    if (!grid) return;
     
     products.sort((a, b) => {
       if (sortType === 'price-low') {
-        const priceA = parseFloat(a.querySelector('.product-price').textContent.replace('$', ''));
-        const priceB = parseFloat(b.querySelector('.product-price').textContent.replace('$', ''));
+        const priceA = parseFloat(a.getAttribute('data-product-price') || a.querySelector('.product-price')?.textContent.replace('$', '') || '0');
+        const priceB = parseFloat(b.getAttribute('data-product-price') || b.querySelector('.product-price')?.textContent.replace('$', '') || '0');
         return priceA - priceB;
       } else if (sortType === 'price-high') {
-        const priceA = parseFloat(a.querySelector('.product-price').textContent.replace('$', ''));
-        const priceB = parseFloat(b.querySelector('.product-price').textContent.replace('$', ''));
+        const priceA = parseFloat(a.getAttribute('data-product-price') || a.querySelector('.product-price')?.textContent.replace('$', '') || '0');
+        const priceB = parseFloat(b.getAttribute('data-product-price') || b.querySelector('.product-price')?.textContent.replace('$', '') || '0');
         return priceB - priceA;
+      } else if (sortType === 'date-old') {
+        // Reverse order for old to new
+        return 0; // Keep original order but reversed
       }
-      return 0;
+      return 0; // Default/date-new: keep original order
     });
     
+    // Re-append in sorted order
     products.forEach(product => grid.appendChild(product));
     
+    // Update active button
     document.querySelectorAll('.sort-modal .modal-button').forEach(btn => {
       btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (event && event.target) {
+      event.target.classList.add('active');
+    }
     
     toggleSortModal();
   }
 
   // Close modals when clicking outside
   document.addEventListener('click', function(event) {
+    const viewControls = document.getElementById('viewControls');
+    const sortControls = document.getElementById('sortControls');
     const viewModal = document.getElementById('viewModal');
     const sortModal = document.getElementById('sortModal');
     
-    if (!event.target.closest('.view-controls')) {
+    if (viewControls && !viewControls.contains(event.target) && viewModal) {
       viewModal.classList.remove('open');
+      isViewModalOpen = false;
     }
     
-    if (!event.target.closest('.sort-controls')) {
+    if (sortControls && !sortControls.contains(event.target) && sortModal) {
       sortModal.classList.remove('open');
+      isSortModalOpen = false;
     }
   });
 
   // Responsive grid adjustment
   function adjustGridForMobile() {
     if (window.innerWidth <= 768) {
-      setGridColumns(2);
-    } else if (activeGrid < 4) {
-      setGridColumns(4);
+      // Hide view controls on mobile
+      const viewControls = document.getElementById('viewControls');
+      if (viewControls) {
+        viewControls.style.display = 'none';
+      }
+      // Force 2 columns on mobile
+      if (activeGrid !== 2) {
+        setGridColumns(2);
+      }
+    } else {
+      // Show view controls on desktop
+      const viewControls = document.getElementById('viewControls');
+      if (viewControls) {
+        viewControls.style.display = 'block';
+      }
+      // Default to 4 if was set to 2 for mobile
+      if (activeGrid === 2) {
+        setGridColumns(4);
+      }
     }
   }
 
   window.addEventListener('resize', adjustGridForMobile);
-  adjustGridForMobile();
+  
+  // Initialize on load
+  document.addEventListener('DOMContentLoaded', function() {
+    adjustGridForMobile();
+    // Hide details for 8-column grid if set
+    if (activeGrid === 8) {
+      setGridColumns(8);
+    }
+  });
 </script>
-
+{% else %}
+  <div style="padding: 100px 40px; text-align: center; min-height: calc(100vh - 140px); position: relative; top: 40px;">
+    <h2 style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 1.5rem; margin-bottom: 1rem; text-transform: uppercase;">
+      Collection Not Found
+    </h2>
+    <p style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 1rem; color: #666;">
+      This collection does not exist or is not available.
+    </p>
+    <p style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 0.9rem; color: #999; margin-top: 1rem;">
+      <a href="/" style="color: #1404FB; text-decoration: underline;">Return to homepage</a>
+    </p>
+  </div>
+{% endif %}

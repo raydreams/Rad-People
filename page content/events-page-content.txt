@@ -1,0 +1,27 @@
+EVENTS PAGE CONTENT
+
+This page loads content automatically from Contentful.
+No manual content entry needed!
+
+However, if you want to add fallback content, you can paste this in the page editor:
+
+---
+
+EVENT CALENDAR
+
+[Events load automatically from Contentful]
+
+PAST EVENTS
+
+[Past events load automatically from Contentful]
+
+---
+
+Note: The page will automatically fetch and display:
+- Upcoming events with video backgrounds
+- Past events grid
+- Event details, dates, locations
+- Mobile auto-rotation
+
+No manual setup required!
+

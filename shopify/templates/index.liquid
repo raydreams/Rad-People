@@ -1,26 +1,42 @@
 {% comment %}
   Homepage template
-  Note: Video URLs can be updated after hosting videos externally (Google Drive, CDN, etc.)
-  For trial accounts, use external hosting since Shopify doesn't support video uploads
+  Note: Video URLs should be set in Theme Settings -> Homepage Videos
+  Get URLs from Content -> Files after uploading videos
 {% endcomment %}
 
 {% render 'intro-animation' %}
 
-<div class="home-container">
-  <div class="video-wrapper">
-    <video class="styled-video" autoplay loop muted playsinline>
-      {% comment %} 
-        TODO: Replace these URLs with your hosted video URLs
-        Option 1: Google Drive direct links (https://drive.google.com/uc?export=download&id=FILE_ID)
-        Option 2: CDN URLs (AWS S3, Cloudflare R2, etc.)
-        Option 3: Remove video section and use static background (see comments below)
-      {% endcomment %}
-      <source src="https://drive.google.com/uc?export=download&id=10zuETrBp9DOxr3z48VbfneHPpUqG23pu" type="video/mp4" media="(min-width: 768px)">
-      <source src="https://drive.google.com/uc?export=download&id=1mQ57Hs5iXP_NRL0HcrmXjXuflFfFibBD" type="video/mp4" media="(max-width: 767px)">
+<div class="home-container" style="position: relative; top: 40px; min-height: calc(100vh - 40px);">
+  <div class="video-wrapper" style="position: fixed; top: 40px; left: 0; width: 100vw; height: calc(100vh - 40px); z-index: 0;">
+    <video class="styled-video" autoplay loop muted playsinline id="homepageVideo" style="width: 100%; height: 100%; object-fit: cover;">
+      {% comment %} Use theme settings if configured, otherwise use provided CDN URLs {% endcomment %}
+      {% if settings.homepage_video_desktop != blank %}
+        <source src="{{ settings.homepage_video_desktop }}" type="video/mp4" media="(min-width: 768px)">
+      {% else %}
+        <source src="https://cdn.shopify.com/videos/c/o/v/5f493f20b473490c812e8ccc686ba666.mp4" type="video/mp4" media="(min-width: 768px)">
+      {% endif %}
+      {% if settings.homepage_video_mobile != blank %}
+        <source src="{{ settings.homepage_video_mobile }}" type="video/mp4" media="(max-width: 767px)">
+      {% else %}
+        <source src="https://cdn.shopify.com/videos/c/o/v/17a9c3389e8a4f3bb313ac2db09116c1.mp4" type="video/mp4" media="(max-width: 767px)">
+      {% endif %}
       Your browser does not support the video tag.
     </video>
   </div>
 </div>
+
+<script>
+  // Ensure video loads and plays
+  document.addEventListener('DOMContentLoaded', function() {
+    const video = document.getElementById('homepageVideo');
+    if (video) {
+      video.load();
+      video.play().catch(function(error) {
+        console.log('Video autoplay prevented:', error);
+      });
+    }
+  });
+</script>
 
 {% comment %}
   ALTERNATIVE: If videos aren't working, replace the video section above with this:

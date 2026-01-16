@@ -1,53 +1,728 @@
 {% comment %}
-  Clients Page Component
-  Note: This will need to be populated with Shopify metafields
+  Clients Page - Fetches from Contentful API automatically
+  Matches exact functionality: Desktop slideshow + table, Mobile vertical scroll
 {% endcomment %}
 
-<div class="clients-container">
-  <div class="clients-list">
-    {% comment %} Clients can be added via metafields or a custom section {% endcomment %}
-    <p style="font-family: 'Sequel Sans Regular', sans-serif; color: black; padding: 20px;">
-      Client logos and information will be displayed here. Use Shopify metafields to add clients.
-    </p>
+{{ 'contentful-api.js' | asset_url | script_tag }}
+
+<div class="clients-page-wrapper" id="clientsPage">
+  <div class="clients-loading" id="clientsLoading" style="display: block; padding: 2rem; text-align: center;">
+    Loading clients...
+  </div>
+
+  {% comment %} Desktop View: Slideshow + Table {% endcomment %}
+  <div class="clients-desktop-view" id="clientsDesktopView" style="display: none;">
+    <div class="clients-slideshow-container" id="clientsSlideshow">
+      <!-- Slides will be populated by JS -->
+    </div>
+    <div class="clients-table-wrapper" id="clientsTableWrapper">
+      <div class="clients-table-container" id="clientsTable">
+        <!-- Table will be populated by JS -->
+      </div>
+    </div>
+  </div>
+
+  {% comment %} Mobile View: Vertical Scroll + Number Nav {% endcomment %}
+  <div class="clients-mobile-view" id="clientsMobileView" style="display: none;">
+    <div class="clients-mobile-slideshow" id="clientsMobileSlideshow">
+      <!-- Mobile slides will be populated by JS -->
+    </div>
+    <div class="clients-number-nav-wrapper" id="clientsNumberNavWrapper">
+      <!-- Number navigation will be populated by JS -->
+    </div>
   </div>
 </div>
 
+<script>
+  let clients = [];
+  let selectedClientIndex = 0;
+  let scrollToIndex = null;
+  let mobileCurrentIndex = 0;
+  let mobileScrollToIndex = null;
+  let screenWidth = window.innerWidth;
+
+  const BLUE = 'rgba(20, 4, 251, 0.15)';
+  const BLUE_HOVER = 'rgba(20, 4, 251, 0.08)';
+
+  // Wait for ContentfulAPI to be available
+  function waitForContentfulAPI(callback, maxAttempts = 50) {
+    let attempts = 0;
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if (typeof window.ContentfulAPI !== 'undefined') {
+        clearInterval(checkInterval);
+        callback();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.warn('Contentful API not available after waiting. Using fallback content.');
+        showFallbackContent();
+      }
+    }, 100);
+  }
+
+  // Load clients from Contentful
+  async function loadClients() {
+    try {
+      if (typeof window.ContentfulAPI === 'undefined') {
+        console.warn('Contentful API not available');
+        showFallbackContent();
+        return;
+      }
+
+      clients = await window.ContentfulAPI.fetchClients();
+      
+      if (!clients || clients.length === 0) {
+        showFallbackContent();
+        return;
+      }
+
+      renderClients();
+    } catch (error) {
+      console.error('Error loading clients:', error);
+      showFallbackContent();
+    }
+  }
+
+  function renderClients() {
+    document.getElementById('clientsLoading').style.display = 'none';
+    
+    if (screenWidth <= 767) {
+      document.getElementById('clientsMobileView').style.display = 'block';
+      renderMobileView();
+    } else {
+      document.getElementById('clientsDesktopView').style.display = 'block';
+      renderDesktopView();
+    }
+  }
+
+  function renderDesktopView() {
+    const slideshow = document.getElementById('clientsSlideshow');
+    const table = document.getElementById('clientsTable');
+    
+    if (!slideshow || !table) return;
+
+    // Render slideshow
+    slideshow.innerHTML = `
+      <div class="clients-slideshow-scroll" id="clientsSlideshowScroll">
+        ${clients.map((client, idx) => `
+          <div class="clients-slide" 
+               data-idx="${idx}"
+               id="slide-${idx}">
+            <div class="client-number">${String(idx + 1).padStart(2, '0')}</div>
+            <div class="client-details">
+              <div class="client-name">${client.name}</div>
+              <div class="client-description">${client.description}</div>
+              <div class="client-company">- ${client.companyType}, ${client.yearStarted}</div>
+            </div>
+            <div class="client-status">
+              <div class="client-status-text">${client.isCompleted ? 'Complete' : 'In Progress'}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Render table
+    table.innerHTML = `
+      <div class="clients-table-inner">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Description</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${clients.map((client, idx) => `
+              <tr class="client-table-row ${idx === selectedClientIndex ? 'selected' : ''}"
+                  data-idx="${idx}"
+                  onclick="selectClientFromTable(${idx})"
+                  onmouseenter="hoverClientTableRow(${idx})"
+                  onmouseleave="unhoverClientTableRow(${idx})">
+                <td>${client.name}</td>
+                <td>${client.description}</td>
+                <td>${client.yearStarted} ${client.isCompleted ? 'Complete' : 'In Progress'}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+
+    // Setup intersection observer for slideshow
+    setupSlideshowObserver();
+  }
+
+  function renderMobileView() {
+    const slideshow = document.getElementById('clientsMobileSlideshow');
+    const navWrapper = document.getElementById('clientsNumberNavWrapper');
+    
+    if (!slideshow) return;
+
+    slideshow.innerHTML = clients.map((client, idx) => `
+      <div class="client-slide-mobile" 
+           data-idx="${idx}"
+           id="mobile-slide-${idx}">
+        <div class="client-number">${String(idx + 1).padStart(2, '0')}</div>
+        <div class="client-name">${client.name}</div>
+        <div class="client-description">${client.description}</div>
+        <div class="client-company">- ${client.companyType}</div>
+        <div class="client-year">${client.yearStarted}</div>
+        <div class="client-status">${client.isCompleted ? 'Complete' : 'In Progress'}</div>
+      </div>
+    `).join('');
+
+    // Render number navigation
+    if (navWrapper) {
+      navWrapper.innerHTML = `
+        <div class="client-number-nav">
+          ${clients.map((_, idx) => `
+            <button class="client-nav-number ${idx === mobileCurrentIndex ? 'active' : ''}"
+                    onclick="selectMobileClient(${idx})"
+                    aria-label="Go to client ${idx + 1}">
+              ${idx + 1}
+            </button>
+          `).join('')}
+        </div>
+      `;
+    }
+
+    // Setup intersection observer for mobile
+    setupMobileObserver();
+  }
+
+  function setupSlideshowObserver() {
+    const container = document.getElementById('clientsSlideshow');
+    const slideshow = document.getElementById('clientsSlideshowScroll');
+    if (!container || !slideshow) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      let maxRatio = 0;
+      let visibleIdx = selectedClientIndex;
+      
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          visibleIdx = Number(entry.target.dataset.idx);
+        }
+      });
+      
+      if (visibleIdx !== selectedClientIndex && visibleIdx >= 0) {
+        selectedClientIndex = visibleIdx;
+        updateTableSelection();
+      }
+    }, {
+      root: container, // Use the scroll container as root
+      rootMargin: '-20% 0px -20% 0px', // Consider slide visible when 60% is shown
+      threshold: [0, 0.25, 0.5, 0.75, 1]
+    });
+
+    // Observe all slides
+    document.querySelectorAll('.clients-slide').forEach((slide, idx) => {
+      slide.dataset.idx = String(idx);
+      observer.observe(slide);
+    });
+  }
+
+  function setupMobileObserver() {
+    const slideshow = document.getElementById('clientsMobileSlideshow');
+    if (!slideshow) return;
+
+    const observer = new IntersectionObserver((entries) => {
+      let maxRatio = 0;
+      let visibleIdx = mobileCurrentIndex;
+      
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && entry.intersectionRatio > maxRatio) {
+          maxRatio = entry.intersectionRatio;
+          visibleIdx = Number(entry.target.dataset.idx);
+        }
+      });
+      
+      if (visibleIdx !== mobileCurrentIndex && visibleIdx >= 0) {
+        mobileCurrentIndex = visibleIdx;
+        updateMobileNav();
+      }
+    }, {
+      root: slideshow,
+      rootMargin: '-20% 0px -20% 0px',
+      threshold: [0, 0.25, 0.5, 0.75, 1]
+    });
+
+    document.querySelectorAll('.client-slide-mobile').forEach((slide, idx) => {
+      slide.dataset.idx = String(idx);
+      observer.observe(slide);
+    });
+  }
+
+  function selectClientFromTable(idx) {
+    selectedClientIndex = idx;
+    scrollToIndex = idx;
+    updateTableSelection();
+    scrollToSlide(idx);
+    
+    setTimeout(() => {
+      scrollToIndex = null;
+    }, 500);
+  }
+
+  function scrollToSlide(idx) {
+    const slide = document.getElementById(`slide-${idx}`);
+    if (slide) {
+      slide.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function selectMobileClient(idx) {
+    mobileCurrentIndex = idx;
+    mobileScrollToIndex = idx;
+    updateMobileNav();
+    
+    const slide = document.getElementById(`mobile-slide-${idx}`);
+    const container = document.getElementById('clientsMobileSlideshow');
+    
+    if (slide && container) {
+      const paddingTop = 16;
+      const slideTop = slide.offsetTop;
+      container.scrollTo({
+        top: slideTop - paddingTop,
+        behavior: 'smooth'
+      });
+    }
+    
+    setTimeout(() => {
+      mobileScrollToIndex = null;
+    }, 500);
+  }
+
+  function hoverClientTableRow(idx) {
+    if (idx === selectedClientIndex) return;
+    const row = document.querySelector(`.client-table-row[data-idx="${idx}"]`);
+    if (row) {
+      row.style.background = BLUE_HOVER;
+    }
+  }
+
+  function unhoverClientTableRow(idx) {
+    if (idx === selectedClientIndex) return;
+    const row = document.querySelector(`.client-table-row[data-idx="${idx}"]`);
+    if (row) {
+      row.style.background = '';
+    }
+  }
+
+  function updateTableSelection() {
+    document.querySelectorAll('.client-table-row').forEach((row, idx) => {
+      if (idx === selectedClientIndex) {
+        row.classList.add('selected');
+        row.style.background = BLUE;
+      } else {
+        row.classList.remove('selected');
+        row.style.background = '';
+      }
+    });
+  }
+
+  function updateMobileNav() {
+    document.querySelectorAll('.client-nav-number').forEach((btn, idx) => {
+      if (idx === mobileCurrentIndex) {
+        btn.classList.add('active');
+      } else {
+        btn.classList.remove('active');
+      }
+    });
+  }
+
+  function showFallbackContent() {
+    document.getElementById('clientsLoading').innerHTML = `
+      <p>No clients found. Clients will be displayed here when available.</p>
+    `;
+  }
+
+  function handleResize() {
+    screenWidth = window.innerWidth;
+    if (clients.length > 0) {
+      renderClients();
+    }
+  }
+
+  window.addEventListener('resize', handleResize);
+
+  document.addEventListener('DOMContentLoaded', function() {
+    screenWidth = window.innerWidth;
+    waitForContentfulAPI(loadClients);
+  });
+</script>
+
 <style>
-  .clients-container {
-    padding: 40px 20px;
+  .clients-page-wrapper {
     min-height: calc(100vh - 40px);
-    background-color: white;
+    background: white;
+    color: black;
   }
 
-  .clients-list {
-    max-width: 1200px;
+  /* Desktop View */
+  .clients-desktop-view {
+    display: block;
+  }
+
+  .clients-slideshow-container {
+    width: 100vw;
+    max-height: 65vh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
     margin: 0 auto;
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 40px;
+    outline: none;
+  }
+
+  .clients-slideshow-scroll {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .clients-slide {
+    height: 65vh;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    display: flex;
+    align-items: stretch;
+    transition: height 0.5s;
+    margin-bottom: 2vh;
+  }
+
+  .client-number {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    text-align: right;
+    color: black;
+    font-size: 1.2rem;
+    font-weight: normal;
+    line-height: 1.1;
+    padding-right: 0;
+    padding-top: 0;
+    margin-right: 4vh;
+    margin-left: 1.2vh;
+    width: auto;
+  }
+
+  @media (min-width: 1200px) {
+    .client-number {
+      font-size: 1.4rem;
+      margin-right: 10vh;
+    }
+  }
+
+  .client-details {
+    width: 64%;
+    text-align: left;
+    color: black;
+    vertical-align: top;
+    padding-left: 7vw;
+    padding-top: 0;
+  }
+
+  .client-name {
+    font-family: 'Sequel Sans Regular', 'Sequel Sans', sans-serif;
+    font-weight: normal;
+    text-transform: uppercase;
+    margin: 0;
+    line-height: 1.2;
+    margin-top: 0.45rem;
+    margin-bottom: 10px;
+    -webkit-text-stroke: 3px black;
+    max-width: 72%;
+    overflow-wrap: normal;
+    word-break: keep-all;
+    white-space: normal;
+    hyphens: none;
+    font-size: 7rem;
+    line-height: 95px;
+  }
+
+  @media (min-width: 768px) and (max-width: 990px) {
+    .client-name {
+      font-size: 4rem;
+      line-height: 60px;
+      margin-bottom: 5px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .client-name {
+      font-size: 3rem;
+      line-height: 45px;
+      margin-bottom: 7px;
+      margin-top: -0.5rem;
+    }
+  }
+
+  .client-description {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    margin-left: 0.1rem;
+    margin-top: 0;
+    text-transform: uppercase;
+    margin-bottom: -6px;
+    font-size: 1.1rem;
+    line-height: 1.1;
+  }
+
+  @media (min-width: 1200px) {
+    .client-description {
+      font-size: 1.4rem;
+    }
+  }
+
+  .client-company {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    margin-left: 0.1rem;
+    margin-top: 0;
+    text-transform: uppercase;
+    margin-bottom: 0;
+    font-size: 1.1rem;
+  }
+
+  @media (min-width: 1200px) {
+    .client-company {
+      font-size: 1.4rem;
+    }
+  }
+
+  .client-status {
+    width: 28%;
+    text-align: left;
+    color: black;
+    vertical-align: top;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    padding-left: 8vw;
+    padding-top: 0;
+  }
+
+  .client-status-text {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 1.2rem;
+    font-weight: bold;
+    line-height: 0.9;
+    margin: 0;
+    padding: 0;
+    margin-top: 1rem;
+    display: flex;
     align-items: center;
+    gap: 0.5em;
   }
 
-  .client-item {
-    text-align: center;
+  @media (min-width: 1200px) {
+    .client-status-text {
+      font-size: 1.4rem;
+    }
   }
 
-  .client-item img {
-    max-width: 100%;
-    height: auto;
-    filter: grayscale(100%);
-    transition: filter 0.3s ease;
+  .clients-table-wrapper {
+    width: 80%;
+    margin: 0 auto;
   }
 
-  .client-item img:hover {
-    filter: grayscale(0%);
+  .clients-table-container {
+    border: 1px solid black;
+    max-height: 14rem;
+    overflow: hidden;
   }
 
-  @media (max-width: 768px) {
-    .clients-list {
-      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-      gap: 20px;
+  .clients-table-inner table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+
+  .clients-table-inner thead {
+    display: table;
+    width: 100%;
+    table-layout: fixed;
+  }
+
+  .clients-table-inner thead th {
+    width: 30%;
+    text-align: left;
+    padding: 0.3rem 1rem;
+    font-weight: bold;
+    font-size: 0.9rem;
+    color: black;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid black;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    white-space: nowrap;
+  }
+
+  .clients-table-inner thead th:nth-child(2) {
+    width: 45%;
+  }
+
+  .clients-table-inner thead th:nth-child(3) {
+    width: 25%;
+  }
+
+  .clients-table-inner tbody {
+    display: block;
+    max-height: 11.5rem;
+    overflow-y: auto;
+    width: 100%;
+  }
+
+  .client-table-row {
+    display: table;
+    table-layout: fixed;
+    width: 100%;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .client-table-row.selected {
+    background: rgba(20, 4, 251, 0.15);
+  }
+
+  .client-table-row td {
+    width: 30%;
+    padding: 3px 1rem;
+    color: black;
+    background: transparent;
+    text-align: left;
+    font-size: 15px;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: none;
+  }
+
+  .client-table-row td:nth-child(2) {
+    width: 45%;
+    border-left: 1px solid black;
+  }
+
+  .client-table-row td:nth-child(3) {
+    width: 25%;
+    border-left: 1px solid black;
+  }
+
+  /* Mobile View */
+  .clients-mobile-view {
+    display: none;
+  }
+
+  .clients-mobile-slideshow {
+    width: 100%;
+    margin: 0 auto;
+    max-height: 100vh;
+    overflow-y: auto;
+    scroll-snap-type: y mandatory;
+    -webkit-overflow-scrolling: touch;
+    min-height: 100vh;
+  }
+
+  .client-slide-mobile {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 1rem 1.2rem 1.2rem 1.2rem;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    margin-bottom: 0;
+    scroll-snap-align: start;
+    height: 100vh;
+    box-sizing: border-box;
+  }
+
+  .client-slide-mobile .client-number {
+    font-size: 1.3rem;
+    margin-left: 0.3rem;
+  }
+
+  .client-slide-mobile .client-name {
+    font-size: 3rem;
+    line-height: 45px;
+    margin-bottom: 7px;
+    margin-top: -0.5rem;
+  }
+
+  .client-slide-mobile .client-description {
+    font-size: 1.3rem;
+    margin-bottom: -1rem;
+  }
+
+  .client-slide-mobile .client-company {
+    font-size: 1.3rem;
+    margin-top: -8px;
+  }
+
+  .client-year {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 1.3rem;
+    text-transform: uppercase;
+    margin-top: 0;
+    margin-left: 0.1rem;
+  }
+
+  .client-slide-mobile .client-status {
+    font-size: 1.3rem;
+    margin-top: -8px;
+    margin-left: 0.1rem;
+    padding: 0;
+    width: auto;
+  }
+
+  .clients-number-nav-wrapper {
+    display: none;
+  }
+
+  .client-number-nav {
+    position: fixed;
+    top: 25%;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border-radius: 12px 0 0 12px;
+    padding: 0.2rem 0.3rem;
+    gap: 0;
+  }
+
+  .client-nav-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #1404FB;
+    border: none;
+    border-radius: 0%;
+    width: 1.1rem;
+    height: 1.1rem;
+    font-weight: bold;
+    font-size: 0.6rem;
+    cursor: pointer;
+    outline: none;
+    transition: background 0.2s, color 0.2s;
+    padding: 0;
+  }
+
+  .client-nav-number.active {
+    background: #1404FB;
+    color: white;
+  }
+
+  @media (max-width: 767px) {
+    .clients-desktop-view {
+      display: none;
+    }
+    .clients-mobile-view {
+      display: block;
+    }
+    .clients-number-nav-wrapper {
+      display: flex !important;
+    }
+    .clients-table-wrapper {
+      display: none !important;
     }
   }
 </style>
-

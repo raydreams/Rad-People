@@ -1,53 +1,1022 @@
 {% comment %}
-  Events Page Component
-  Note: This will need to be populated with Shopify metafields or a custom collection
+  Events Page - Fetches from Contentful API automatically
+  Matches exact functionality from React site with video backgrounds, event grid, past events
 {% endcomment %}
 
-<div class="events-container">
-  <div class="events-upcoming">
-    <h2 class="events-title" style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1.5rem; text-transform: uppercase;">
-      UPCOMING EVENTS
-    </h2>
-    {% comment %} Events can be added via metafields or a custom section {% endcomment %}
-    <div class="events-list">
-      <p>Events will be displayed here. Use Shopify metafields or a custom section to add events.</p>
+{{ 'contentful-api.js' | asset_url | script_tag }}
+
+<div class="events-page-wrapper" id="eventsPage">
+  <div class="events-loading" id="eventsLoading" style="display: block; padding: 2rem; text-align: center;">
+    Loading events...
+  </div>
+
+  {% comment %} Upcoming Events Section {% endcomment %}
+  <div class="events-upcoming-section" id="eventsUpcomingSection" style="display: none;">
+    <div class="events-container" id="eventsContainer">
+      <div class="event-background" id="eventBackground">
+        <div class="event-video-background" id="eventVideoBackground"></div>
+        <div class="event-background-image" id="eventBackgroundImage" style="display: none;"></div>
+        
+        {% comment %} Mobile Event Navigation {% endcomment %}
+        <div class="mobile-event-nav" id="mobileEventNav" style="display: none;">
+          <!-- Numbers will be populated by JS -->
+        </div>
+
+        {% comment %} Event Title {% endcomment %}
+        <div class="event-title">
+          <h2 class="event-title-text">EVENT</h2>
+          <h2 class="event-title-text">CALENDAR</h2>
+        </div>
+      </div>
+
+      {% comment %} Event Names Container (Desktop Grid) {% endcomment %}
+      <div class="event-names-container" id="eventNamesContainer">
+        <!-- Events will be populated by JS -->
+      </div>
     </div>
   </div>
 
-  <div class="events-past">
-    <h2 class="events-title" style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1.5rem; text-transform: uppercase;">
-      PAST EVENTS
-    </h2>
-    <div class="events-list">
-      <p>Past events will be displayed here.</p>
+  {% comment %} Past Events Section {% endcomment %}
+  <div class="events-past-section" id="eventsPastSection" style="display: none;">
+    <h2 class="past-events-title">PAST</h2>
+    <div class="past-events-list" id="pastEventsList">
+      <!-- Past events will be populated by JS -->
     </div>
   </div>
 </div>
 
+<script>
+  let events = [];
+  let upcomingEvents = [];
+  let pastEvents = [];
+  let activeEventId = null;
+  let activeEventIndex = 0;
+  let screenWidth = window.innerWidth;
+  let screenHeight = window.innerHeight;
+  let mobileAutoRotateInterval = null;
+
+  // Wait for ContentfulAPI to be available
+  function waitForContentfulAPI(callback, maxAttempts = 50) {
+    let attempts = 0;
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if (typeof window.ContentfulAPI !== 'undefined') {
+        clearInterval(checkInterval);
+        callback();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.warn('Contentful API not available after waiting. Using fallback content.');
+        showFallbackContent();
+      }
+    }, 100);
+  }
+
+  // Load events from Contentful
+  async function loadEvents() {
+    try {
+      if (typeof window.ContentfulAPI === 'undefined') {
+        console.warn('Contentful API not available');
+        showFallbackContent();
+        return;
+      }
+
+      events = await window.ContentfulAPI.fetchEvents();
+      
+      if (!events || events.length === 0) {
+        showFallbackContent();
+        return;
+      }
+
+      categorizeEvents();
+      renderEvents();
+    } catch (error) {
+      console.error('Error loading events:', error);
+      showFallbackContent();
+    }
+  }
+
+  function categorizeEvents() {
+    const now = new Date();
+    upcomingEvents = [];
+    pastEvents = [];
+
+    events.forEach(event => {
+      const eventDate = new Date(event.date);
+      if (eventDate >= now) {
+        upcomingEvents.push(event);
+      } else {
+        pastEvents.push(event);
+      }
+    });
+
+    // Sort upcoming by date (ascending), past by date (descending)
+    upcomingEvents.sort((a, b) => new Date(a.date) - new Date(b.date));
+    pastEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Set initial active event
+    if (upcomingEvents.length > 0) {
+      activeEventId = upcomingEvents[0].id;
+      activeEventIndex = 0;
+      updateActiveEvent();
+    }
+  }
+
+  function renderEvents() {
+    document.getElementById('eventsLoading').style.display = 'none';
+    document.getElementById('eventsUpcomingSection').style.display = 'block';
+    
+    if (upcomingEvents.length > 0) {
+      renderUpcomingEvents();
+    }
+    
+    if (pastEvents.length > 0) {
+      document.getElementById('eventsPastSection').style.display = 'block';
+      renderPastEvents();
+    }
+
+    // Start mobile auto-rotation if on mobile
+    if (screenWidth <= 767 && upcomingEvents.length > 0) {
+      startMobileAutoRotation();
+    }
+  }
+
+  function renderUpcomingEvents() {
+    const container = document.getElementById('eventNamesContainer');
+    const mobileNav = document.getElementById('mobileEventNav');
+    
+    if (!container) return;
+
+    // Desktop: Show up to 4 events in grid
+    if (screenWidth > 767) {
+      container.innerHTML = Array.from({ length: 4 }).map((_, i) => {
+        const event = upcomingEvents[i];
+        if (!event) {
+          return `<div class="event-item-container empty"></div>`;
+        }
+        
+        const isActive = event.id === activeEventId;
+        const dateStr = formatEventDate(event.date);
+        
+        return `
+          <div class="event-item-container ${isActive ? 'active' : ''}" 
+               data-event-id="${event.id}"
+               onmouseenter="handleEventHover('${event.id}')">
+            <div class="event-content-wrapper">
+              <a href="/pages/event-detail?id=${event.id}" class="event-link" onclick="sessionStorage.setItem('selectedEventId', '${event.id}');">
+                <p class="event-date">${dateStr}</p>
+                <h3 class="event-name">${event.name}</h3>
+                <div class="event-location">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4em;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1404FB" stroke-width="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span class="location-first-line">${event.location || ''}</span>
+                  </span>
+                </div>
+                <p class="event-description">${truncateDescription(event.description || '', 300)}</p>
+              </a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    } else {
+      // Mobile: Show single active event
+      const activeEvent = upcomingEvents[activeEventIndex];
+      if (activeEvent) {
+        container.innerHTML = `
+          <div class="event-item-container active">
+            <a href="/pages/event-detail?id=${activeEvent.id}" class="event-link" onclick="sessionStorage.setItem('selectedEventId', '${activeEvent.id}');">
+              <div class="event-content-wrapper">
+                <p class="event-date">${formatEventDate(activeEvent.date)}</p>
+                <h3 class="event-name">${activeEvent.name}</h3>
+                <div class="event-location">
+                  <span style="display: inline-flex; align-items: center; gap: 0.4em;">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#1404FB" stroke-width="2">
+                      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                      <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    <span class="location-first-line">${activeEvent.location || ''}</span>
+                  </span>
+                </div>
+                <p class="event-description">${truncateDescription(activeEvent.description || '', 300)}</p>
+                <button class="mobile-event-button">LEARN MORE</button>
+              </div>
+            </a>
+          </div>
+        `;
+      }
+
+      // Mobile navigation numbers
+      if (mobileNav) {
+        const count = Math.min(4, upcomingEvents.length);
+        mobileNav.innerHTML = Array.from({ length: count }).map((_, i) => `
+          <button class="event-number ${i === activeEventIndex ? 'active' : ''}" 
+                  onclick="setActiveEventIndex(${i})"
+                  data-index="${i}">
+            ${i + 1}
+          </button>
+        `).join('');
+        mobileNav.style.display = 'flex';
+      }
+    }
+  }
+
+  function renderPastEvents() {
+    const container = document.getElementById('pastEventsList');
+    if (!container) return;
+
+    container.innerHTML = pastEvents.map(event => `
+      <a href="/pages/event-detail?id=${event.id}" class="past-event-card" onclick="sessionStorage.setItem('selectedEventId', '${event.id}');">
+        <div class="image-container">
+          <img src="${event.thumbnailImageUrl || ''}" alt="${event.name}" />
+          <div class="view-overlay">VIEW</div>
+        </div>
+        <h3 class="past-event-name">${event.name}</h3>
+        <p class="past-event-description">${truncateDescription(event.description || '', 150)}</p>
+      </a>
+    `).join('');
+  }
+
+  function handleEventHover(eventId) {
+    if (screenWidth <= 767) return; // Only on desktop
+    
+    activeEventId = eventId;
+    updateActiveEvent();
+    renderUpcomingEvents();
+  }
+
+  function setActiveEventIndex(index) {
+    if (index < 0 || index >= Math.min(4, upcomingEvents.length)) return;
+    
+    activeEventIndex = index;
+    activeEventId = upcomingEvents[index]?.id || null;
+    updateActiveEvent();
+    renderUpcomingEvents();
+    
+    // Reset auto-rotation timer
+    if (mobileAutoRotateInterval) {
+      clearInterval(mobileAutoRotateInterval);
+      startMobileAutoRotation();
+    }
+  }
+
+  function updateActiveEvent() {
+    const event = upcomingEvents.find(e => e.id === activeEventId);
+    if (!event) return;
+
+    const background = document.getElementById('eventBackground');
+    const videoContainer = document.getElementById('eventVideoBackground');
+    const imageContainer = document.getElementById('eventBackgroundImage');
+
+    // Clean up any existing Wistia instances and scripts
+    videoContainer.innerHTML = '';
+    
+    // Remove any existing Wistia embed elements from the page
+    document.querySelectorAll('.wistia_embed').forEach(el => {
+      if (!videoContainer.contains(el)) {
+        el.remove();
+      }
+    });
+    
+    // Check for valid video ID with strict validation
+    let videoId = null;
+    if (event && event.wistiaVideoId) {
+      const rawId = event.wistiaVideoId;
+      if (typeof rawId === 'string') {
+        const trimmed = rawId.trim();
+        // Validate: not empty, not string versions of null/undefined, matches Wistia ID pattern
+        if (trimmed && 
+            trimmed !== 'undefined' && 
+            trimmed !== 'null' &&
+            trimmed !== '' &&
+            /^[a-zA-Z0-9_-]+$/.test(trimmed)) {
+          videoId = trimmed;
+        }
+      }
+    }
+    
+    // Debug log
+    if (event && event.wistiaVideoId && !videoId) {
+      console.warn('Invalid or missing Wistia video ID for event:', event.id, 'Raw value:', event.wistiaVideoId);
+    }
+
+    // Handle video or image background  
+    if (videoId && videoId.length > 0 && /^[a-zA-Z0-9_-]+$/.test(videoId)) {
+      // Final safety check - ensure videoId is still valid
+      const finalVideoId = String(videoId).trim();
+      if (!finalVideoId || finalVideoId === 'undefined' || finalVideoId === 'null') {
+        console.error('Invalid videoId after validation:', videoId);
+        if (event.thumbnailImageUrl) {
+          videoContainer.style.display = 'none';
+          imageContainer.style.backgroundImage = `url(${event.thumbnailImageUrl})`;
+          imageContainer.style.display = 'block';
+        }
+        return;
+      }
+      
+      // Store finalVideoId in outer scope for script loading
+      const validVideoId = finalVideoId;
+      
+      // Wistia video - only load if we have a valid ID
+      imageContainer.style.display = 'none';
+      
+      // Create the video container with proper Wistia embed
+      const wrapper = document.createElement('div');
+      wrapper.className = 'wistia-video-wrapper';
+      wrapper.setAttribute('data-wistia-video-id', validVideoId);
+      
+      // Create the Wistia embed div - use validVideoId to ensure it's valid
+      const embedDiv = document.createElement('div');
+      embedDiv.className = `wistia_embed wistia_async_${validVideoId}`;
+      embedDiv.setAttribute('data-wistia-id', validVideoId);
+      embedDiv.style.cssText = 'height:100%;width:100%';
+      
+      // Create swatch image
+      const swatchDiv = document.createElement('div');
+      swatchDiv.className = 'wistia_swatch';
+      swatchDiv.style.cssText = 'height:100%;left:0;opacity:0;overflow:hidden;position:absolute;top:0;transition:opacity 200ms;width:100%;';
+      
+      const swatchImg = document.createElement('img');
+      swatchImg.src = `https://fast.wistia.com/embed/medias/${validVideoId}/swatch`;
+      swatchImg.style.cssText = 'filter:blur(5px);height:100%;object-fit:contain;width:100%;';
+      swatchImg.alt = '';
+      swatchImg.setAttribute('aria-hidden', 'true');
+      swatchImg.onload = function() { this.parentElement.style.opacity = '1'; };
+      swatchImg.onerror = function() { this.parentElement.style.display = 'none'; };
+      
+      swatchDiv.appendChild(swatchImg);
+      embedDiv.appendChild(swatchDiv);
+      wrapper.appendChild(embedDiv);
+      videoContainer.appendChild(wrapper);
+      
+      // Load Wistia scripts only once
+      if (!window.wistiaScriptsLoaded) {
+        // Load JSONP for this specific video first
+        const jsonpScript = document.createElement('script');
+        jsonpScript.src = `https://fast.wistia.com/embed/medias/${validVideoId}.jsonp`;
+        jsonpScript.async = true;
+        jsonpScript.onerror = function() {
+          console.error('Failed to load Wistia JSONP for video:', validVideoId);
+          if (event.thumbnailImageUrl) {
+            videoContainer.style.display = 'none';
+            imageContainer.style.backgroundImage = `url(${event.thumbnailImageUrl})`;
+            imageContainer.style.display = 'block';
+          }
+        };
+        document.head.appendChild(jsonpScript);
+        
+        // Load main Wistia script
+        const wistiaScript = document.createElement('script');
+        wistiaScript.src = 'https://fast.wistia.com/assets/external/E-v1.js';
+        wistiaScript.async = true;
+        wistiaScript.onload = function() {
+          // Wait a bit to ensure DOM elements are ready
+          setTimeout(() => {
+            if (window._wq && validVideoId) {
+              window._wq.push({
+                id: validVideoId,
+                options: {
+                  autoplay: true,
+                  muted: true,
+                  loop: true,
+                  silentAutoplay: true,
+                  playBarControl: false,
+                  controlsVisibleOnLoad: false
+                }
+              });
+            }
+          }, 100);
+        };
+        wistiaScript.onerror = function() {
+          console.error('Failed to load Wistia script');
+          if (event.thumbnailImageUrl) {
+            videoContainer.style.display = 'none';
+            imageContainer.style.backgroundImage = `url(${event.thumbnailImageUrl})`;
+            imageContainer.style.display = 'block';
+          }
+        };
+        document.head.appendChild(wistiaScript);
+        window.wistiaScriptsLoaded = true;
+      } else {
+        // Scripts already loaded, add to queue with delay
+        setTimeout(() => {
+          if (window._wq && validVideoId) {
+            window._wq.push({
+              id: validVideoId,
+              options: {
+                autoplay: true,
+                muted: true,
+                loop: true,
+                silentAutoplay: true,
+                playBarControl: false,
+                controlsVisibleOnLoad: false
+              }
+            });
+          }
+        }, 100);
+      }
+      
+      videoContainer.style.display = 'block';
+    } else if (event.thumbnailImageUrl) {
+      // Image background - no video or invalid video ID
+      videoContainer.style.display = 'none';
+      imageContainer.style.backgroundImage = `url(${event.thumbnailImageUrl})`;
+      imageContainer.style.display = 'block';
+    }
+  }
+
+  function startMobileAutoRotation() {
+    if (screenWidth > 767 || upcomingEvents.length === 0) return;
+    
+    if (mobileAutoRotateInterval) {
+      clearInterval(mobileAutoRotateInterval);
+    }
+
+    mobileAutoRotateInterval = setInterval(() => {
+      const nextIndex = (activeEventIndex + 1) % Math.min(4, upcomingEvents.length);
+      setActiveEventIndex(nextIndex);
+    }, 9000);
+  }
+
+  function formatEventDate(dateStr) {
+    if (!dateStr) return '';
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit'
+    }).replace(/\//g, '.');
+  }
+
+  function truncateDescription(text, maxLength) {
+    if (!text) return '';
+    const firstLine = text.split('\n')[0];
+    return firstLine.length > maxLength 
+      ? firstLine.slice(0, maxLength) + '...'
+      : firstLine;
+  }
+
+  function showFallbackContent() {
+    document.getElementById('eventsLoading').innerHTML = `
+      <p>No events found. Events will be displayed here when available.</p>
+    `;
+  }
+
+  // Handle window resize
+  function handleResize() {
+    screenWidth = window.innerWidth;
+    screenHeight = window.innerHeight;
+    
+    if (screenWidth <= 767) {
+      if (mobileAutoRotateInterval) {
+        clearInterval(mobileAutoRotateInterval);
+      }
+      startMobileAutoRotation();
+    } else {
+      if (mobileAutoRotateInterval) {
+        clearInterval(mobileAutoRotateInterval);
+      }
+    }
+    
+    if (upcomingEvents.length > 0) {
+      renderUpcomingEvents();
+    }
+  }
+
+  window.addEventListener('resize', handleResize);
+
+  // Initialize Wistia queue
+  window._wq = window._wq || [];
+
+  // Initialize
+  document.addEventListener('DOMContentLoaded', function() {
+    screenWidth = window.innerWidth;
+    screenHeight = window.innerHeight;
+    waitForContentfulAPI(loadEvents);
+  });
+</script>
+
 <style>
-  .events-container {
-    padding: 40px 20px;
+  .events-page-wrapper {
     min-height: calc(100vh - 40px);
-    background-color: white;
+    background: white;
   }
 
-  .events-title {
-    font-family: 'Helvetica Neue LT Com', sans-serif;
-    font-size: 1.5rem;
-    text-transform: uppercase;
-    margin-bottom: 20px;
-    color: black;
+  .events-container {
+    height: min(55vw, 95vh, 1000px);
+    position: relative;
+    margin-bottom: 2rem;
   }
 
-  .events-list {
+  @media (max-width: 767px) {
+    .events-container {
+      height: min(130vw, 65vh, 1000px);
+    }
+  }
+
+  .event-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: black;
+  }
+
+  .event-video-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+  }
+
+  .event-video-background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.7));
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .event-background-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    opacity: 1;
+    transition: opacity 0.3s ease-in-out;
+  }
+
+  .event-background-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 1.5));
+  }
+
+  .wistia-video-wrapper {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .wistia_embed {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100vw;
+    height: auto;
+  }
+
+  @media (max-width: 767px) {
+    .wistia_embed {
+      width: 200vw;
+      height: 200vh;
+      transform: translate(-50%, -50%) scale(1.2);
+    }
+  }
+
+  .event-title {
+    position: absolute;
+    top: 2rem;
+    left: 1rem;
+    color: white;
+    margin-left: 20px;
+    z-index: 2;
+  }
+
+  @media (max-width: 767px) {
+    .event-title {
+      top: 4.5rem;
+      left: 0.5rem;
+      margin-left: 10px;
+    }
+  }
+
+  .event-title-text {
     font-family: 'Sequel Sans Regular', sans-serif;
-    color: black;
-    line-height: 1.6;
+    -webkit-text-stroke: 1px black;
+    margin: 0;
+    text-transform: uppercase;
+    font-size: 10rem;
+    line-height: 135px;
   }
 
-  .events-upcoming,
-  .events-past {
-    margin-bottom: 40px;
+  @media (min-width: 991px) and (max-width: 1250px) {
+    .event-title-text {
+      font-size: 7rem;
+      line-height: 95px;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 990px) {
+    .event-title-text {
+      font-size: 4rem;
+      line-height: 60px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .event-title-text {
+      font-size: 3rem;
+      line-height: 40px;
+      -webkit-text-stroke: 1px white;
+    }
+  }
+
+  .event-names-container {
+    position: absolute;
+    top: min(50vh, 30vw, 800px);
+    left: 0;
+    width: 100%;
+    margin: 0;
+    z-index: 2;
+  }
+
+  @media (min-width: 768px) {
+    .event-names-container {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: min(1vw, 16px);
+      padding: min(2vw, 70px) min(3vw, 48px);
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 990px) {
+    .event-names-container {
+      top: 25vh;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .event-names-container {
+      display: block;
+      padding: 0 1rem;
+      width: calc(100% - 2rem);
+      top: auto;
+      bottom: 2rem;
+    }
+  }
+
+  .event-item-container {
+    opacity: 0.4;
+    transition: all 0.5s ease-in-out;
+    margin-top: min(6vw, 24px);
+  }
+
+  .event-item-container.active {
+    opacity: 1;
+  }
+
+  .event-item-container:hover {
+    opacity: 1;
+  }
+
+  @media (min-width: 768px) {
+    .event-item-container {
+      max-width: min(20vw, 350px);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .event-item-container {
+      width: 100%;
+      margin-bottom: 0;
+      position: relative;
+    }
+    .event-item-container:not(.active) {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(20px);
+    }
+  }
+
+  .event-link {
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .event-content-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 110%;
+    min-width: 0;
+  }
+
+  @media (max-width: 767px) {
+    .event-content-wrapper {
+      width: 100%;
+    }
+  }
+
+  .event-date {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    color: white;
+    margin: 0 0 0.5rem 0.5rem;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+  }
+
+  @media (min-width: 1251px) {
+    .event-date {
+      font-size: 1rem;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .event-date {
+      font-size: 0.9rem;
+    }
+  }
+
+  .event-name {
+    font-family: 'Sequel Sans Regular', sans-serif;
+    padding-left: 6px;
+    color: white;
+    cursor: pointer;
+    margin: 0;
+    text-transform: uppercase;
+    line-height: 1.2;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    font-size: 1.4rem;
+  }
+
+  @media (min-width: 1251px) {
+    .event-name {
+      font-size: 2.2rem;
+    }
+  }
+
+  @media (min-width: 768px) and (max-width: 1250px) {
+    .event-name {
+      font-size: 1.2rem;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .event-name {
+      font-size: 1.2rem;
+    }
+  }
+
+  .event-location {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Sequel Sans Regular', sans-serif;
+    color: white;
+    margin: 0;
+    margin-top: 5px;
+    line-height: 1.2;
+    text-transform: uppercase;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    max-width: 100%;
+    font-size: 1.2rem;
+  }
+
+  @media (min-width: 768px) {
+    .event-location {
+      max-width: 350px;
+      font-size: 1.9rem;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .event-location {
+      font-size: 1.2rem;
+      max-width: 90vw;
+      margin-top: 0px;
+    }
+  }
+
+  .event-description {
+    font-family: 'Sequel Sans Regular', sans-serif;
+    color: white;
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-right: 10px;
+    opacity: 0.9;
+    word-wrap: break-word;
+    hyphens: auto;
+    max-width: 300px;
+    font-size: 0.7rem;
+    line-height: 1.4;
+  }
+
+  @media (max-width: 767px) {
+    .event-description {
+      max-width: 90vw;
+      font-size: 0.8rem;
+      padding-bottom: 20px;
+      margin-top: 17px;
+      margin-bottom: 0;
+    }
+  }
+
+  .mobile-event-button {
+    width: 90vw;
+    margin: 10px 3px 0;
+    padding: 0.3rem 0;
+    border: 1px solid black;
+    background: white;
+    color: black;
+    font-family: 'Sequel Sans Regular', sans-serif;
+    font-size: 0.7rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: all 0.3s ease-in-out;
+    cursor: pointer;
+  }
+
+  @media (min-width: 768px) {
+    .mobile-event-button {
+      display: none;
+    }
+  }
+
+  .mobile-event-button:hover {
+    background: #1404FB;
+    color: white;
+    border-color: white;
+  }
+
+  .mobile-event-nav {
+    display: flex;
+    gap: 1rem;
+    position: absolute;
+    top: 2rem;
+    margin-left: 23px;
+    z-index: 2;
+  }
+
+  @media (min-width: 768px) {
+    .mobile-event-nav {
+      display: none;
+    }
+  }
+
+  .event-number {
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid white;
+    border-radius: 0;
+    background: transparent;
+    color: white;
+    font-family: 'Sequel Sans Regular', sans-serif;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.7s ease, color 0.7s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    aspect-ratio: 1;
+    box-sizing: border-box;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .event-number.active {
+    background: #0000FF;
+  }
+
+  .event-number:active {
+    background: white;
+    color: black;
+  }
+
+  .past-events-title {
+    font-family: 'Sequel Sans Regular', sans-serif;
+    font-size: 4.5rem;
+    color: black;
+    margin: 2rem 0 3.5rem;
+    padding: 0 2rem;
+  }
+
+  @media (max-width: 767px) {
+    .past-events-title {
+      font-size: 2.5rem;
+      padding: 0 1rem;
+      margin: 0.15rem 0 1.75rem;
+    }
+  }
+
+  .past-events-list {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2rem;
+    padding: 0 1rem 4rem;
+  }
+
+  @media (max-width: 767px) {
+    .past-events-list {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+
+  .past-event-card {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    cursor: pointer;
+    padding-bottom: 3rem;
+    background: white;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .past-event-card img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    object-position: center;
+    margin-bottom: 0.1rem;
+  }
+
+  .image-container {
+    position: relative;
+    width: 100%;
+  }
+
+  .view-overlay {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    color: black;
+    border: 1px solid black;
+    font-size: 0.7rem;
+    padding: 0.3rem 3rem;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Sequel Sans Regular', sans-serif;
+  }
+
+  @media (max-width: 767px) {
+    .view-overlay {
+      display: none !important;
+    }
+  }
+
+  .past-event-card:hover .view-overlay {
+    opacity: 1;
+    background: #1404FB;
+    color: white;
+    border-color: transparent;
+  }
+
+  .past-event-name {
+    font-family: 'Sequel Sans Regular', sans-serif;
+    font-size: 2rem;
+    color: black;
+    margin: 0 0 0.3rem;
+    text-transform: uppercase;
+  }
+
+  @media (min-width: 768px) and (max-width: 1050px) {
+    .past-event-name {
+      font-size: 1rem;
+    }
+  }
+
+  .past-event-description {
+    font-family: 'Sequel Sans Regular', sans-serif;
+    font-size: 0.85rem;
+    color: black;
+    margin: 0;
+    line-height: 1.4;
+  }
+
+  @media (min-width: 768px) and (max-width: 1050px) {
+    .past-event-description {
+      font-size: 0.65rem;
+    }
   }
 </style>
-

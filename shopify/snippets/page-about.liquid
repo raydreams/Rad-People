@@ -1,31 +1,400 @@
 {% comment %}
-  About Page Component
-  Note: This will need to be populated with Shopify metafields or page content
+  About Page - Fetches from Contentful API automatically
+  Matches exact functionality from React site
 {% endcomment %}
 
-<div class="about-container">
-  <div class="about-info-box">
-    {% if page.content != blank %}
-      <div class="about-content">
-        {{ page.content }}
-      </div>
-    {% else %}
-      <div class="about-content">
-        <p>About content goes here. You can add this via the Shopify page editor or use metafields.</p>
-      </div>
-    {% endif %}
+{{ 'contentful-api.js' | asset_url | script_tag }}
+
+<div class="about-page-wrapper" id="aboutPage">
+  {% comment %} Mobile View - Talent Card Grid {% endcomment %}
+  <div class="about-mobile-view" style="display: none;">
+    <div class="about-mobile-top-menu" id="aboutMobileMenu">
+      <div class="about-mobile-menu-label">About Us</div>
+      <span class="about-mobile-dropdown-icon">▼</span>
+    </div>
+    <div class="about-mobile-dropdown-content" id="aboutMobileContent" style="display: block;">
+      <div id="aboutMobileText">Loading...</div>
+    </div>
+    <div class="about-mobile-talent-grid" id="aboutMobileTalentGrid">
+      <div style="padding: 2rem; text-align: center;">Loading team members...</div>
+    </div>
   </div>
-  
-  {% comment %} Talent/Team section would go here - can use metafields {% endcomment %}
-  <div class="about-team-section">
-    <p style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1.3rem; margin-top: 30vh; margin-left: 6vh;">
-      TEAM
-    </p>
-    {% comment %} Team members can be added via metafields or a custom section {% endcomment %}
+
+  {% comment %} Desktop View {% endcomment %}
+  <div class="about-desktop-view">
+    <div class="about-container">
+      <div class="about-info-box">
+        <div class="about-content" id="aboutContent">
+          Loading...
+        </div>
+      </div>
+
+      <ul class="about-names-list">
+        <li>TEAM</li>
+        <li><br></li>
+        <li><br></li>
+        <div id="aboutTeamList">
+          <li style="padding: 1rem;">Loading team members...</li>
+        </div>
+      </ul>
+
+      <div id="aboutProfileWrapper" class="about-profile-wrapper" style="display: none;">
+        <img class="about-profile-preview" id="aboutProfileImage" src="" alt="" />
+        <div class="about-profile-bio" id="aboutProfileBio"></div>
+      </div>
+    </div>
   </div>
 </div>
 
+{% comment %} Circular text moved outside wrapper {% endcomment %}
+<div class="about-bottom-left-container">
+  <div class="about-circular-text-holder">
+    <div class="about-circular-text-wrapper" 
+         onmouseenter="showAboutContact()" 
+         onmouseleave="hideAboutContact()">
+      <svg class="about-circular-svg" viewBox="0 0 200 200">
+        <defs>
+          <path id="about-circle-path" d="M 100, 100 m -80, 0 a 80,80 0 1,1 160,0 a 80,80 0 1,1 -160,0" />
+        </defs>
+        <text class="about-circular-text" id="circularTextElement" font-size="14" fill="#1404FB" font-weight="bold">
+          <textPath href="#about-circle-path" startOffset="0%">
+            RESEARCH*AND*DEVELOPMENT*
+          </textPath>
+          <textPath href="#about-circle-path" startOffset="50%">
+            RESEARCH*AND*DEVELOPMENT*
+          </textPath>
+        </text>
+      </svg>
+    </div>
+    <div class="about-contact-text" id="aboutContactText">
+      Contact Us: contact@radpeople.us
+    </div>
+  </div>
+</div>
+
+<script>
+  let selectedTeamMemberId = null;
+  let hoveredTeamMemberId = null;
+  let teamMembers = [];
+  let aboutContent = '';
+
+  // Wait for ContentfulAPI to be available
+  function waitForContentfulAPI(callback, maxAttempts = 50) {
+    let attempts = 0;
+    const checkInterval = setInterval(() => {
+      attempts++;
+      if (typeof window.ContentfulAPI !== 'undefined') {
+        clearInterval(checkInterval);
+        callback();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkInterval);
+        console.warn('Contentful API not available after waiting. Using fallback content.');
+        loadFallbackContent();
+      }
+    }, 100);
+  }
+
+  // Load data from Contentful
+  async function loadAboutPageData() {
+    try {
+      // Check if Contentful API is configured
+      if (typeof window.ContentfulAPI === 'undefined') {
+        console.warn('Contentful API not configured. Using fallback content.');
+        loadFallbackContent();
+        return;
+      }
+
+      // Fetch data
+      [teamMembers, aboutContent] = await Promise.all([
+        window.ContentfulAPI.fetchTeamMembers(),
+        window.ContentfulAPI.fetchAboutContent()
+      ]);
+
+      // Render content
+      renderAboutContent();
+      renderTeamMembers();
+      renderMobileView();
+    } catch (error) {
+      console.error('Error loading about page data:', error);
+      loadFallbackContent();
+    }
+  }
+
+  function loadFallbackContent() {
+    // Fallback to page content or default
+    const pageContent = document.querySelector('#aboutContent');
+    if (pageContent) {
+      const fallback = `{{ page.content | default: "RADPEOPLE IS A CREATIVE OFFICE AND CULTURAL STUDIO WITH SATELLITE OFFICES IN NEW YORK AND AUSTIN. WE CONCEPT AND PRODUCE WORK AT THE INTERSECTION OF FASHION, ART, MUSIC, AND EXPERIENCE—FROM IMMERSIVE EVENTS TO BRAND COLLABORATIONS. OUR MULTIDISCIPLINARY PRACTICE SPANS EVENT PRODUCTION, CREATIVE DIRECTION, BRAND STRATEGY, DESIGN SERVICES, AND EXPERIENTIAL MARKETING, ALL GUIDED BY STRONG NARRATIVE AND POINT OF VIEW. WE COLLABORATE WITH ARTISTS, BRANDS, AND COMMUNITIES TO CREATE WORK THAT FEELS INTENTIONAL, RELEVANT, AND ALIVE." }}`;
+      pageContent.innerHTML = fallback;
+    }
+  }
+
+  function renderAboutContent() {
+    const contentEl = document.getElementById('aboutContent');
+    const mobileTextEl = document.getElementById('aboutMobileText');
+    
+    if (aboutContent && contentEl) {
+      contentEl.innerHTML = aboutContent.replace(/\n/g, '<br>');
+    }
+    if (aboutContent && mobileTextEl) {
+      mobileTextEl.innerHTML = aboutContent.replace(/\n/g, '<br>');
+    }
+  }
+
+  function renderTeamMembers() {
+    const teamListEl = document.getElementById('aboutTeamList');
+    if (!teamListEl || !teamMembers.length) return;
+
+    teamListEl.innerHTML = teamMembers.map((member, index) => `
+      <li 
+        class="about-name-item" 
+        data-member-id="${index}"
+        onmouseenter="showTeamMemberProfile(${index})"
+        onmouseleave="hideTeamMemberProfile()"
+        onclick="toggleTeamMemberSelection(${index})"
+      >
+        <span class="about-scrambled-name">${member.firstName} ${member.lastName}</span>
+      </li>
+    `).join('');
+  }
+
+  function renderMobileView() {
+    const mobileGrid = document.getElementById('aboutMobileTalentGrid');
+    if (!mobileGrid || !teamMembers.length) return;
+
+    mobileGrid.innerHTML = teamMembers.map(member => `
+      <div class="about-mobile-talent-card">
+        <div class="about-mobile-image-wrapper">
+          <img 
+            src="${member.profilePictureUrl || ''}" 
+            alt="${member.firstName} ${member.lastName}"
+            class="about-mobile-talent-image"
+            onclick="toggleMobileTalentBio(this)"
+          />
+        </div>
+        <div class="about-mobile-talent-info">
+          <div class="about-mobile-talent-name">${member.firstName} ${member.lastName}</div>
+          <div class="about-mobile-talent-role">${member.role}</div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function showTeamMemberProfile(index) {
+    hoveredTeamMemberId = index;
+    updateProfileDisplay();
+    
+    // Don't show contact text when hovering team members - only on circle hover
+    const contactText = document.getElementById('aboutContactText');
+    if (contactText) {
+      contactText.style.display = 'none';
+    }
+  }
+
+  function hideTeamMemberProfile() {
+    hoveredTeamMemberId = null;
+    if (!selectedTeamMemberId) {
+      updateProfileDisplay();
+    }
+    // Don't show contact text when unhovering team members
+    const contactText = document.getElementById('aboutContactText');
+    if (contactText) {
+      contactText.style.display = 'none';
+    }
+  }
+
+  function toggleTeamMemberSelection(index) {
+    if (selectedTeamMemberId === index) {
+      selectedTeamMemberId = null;
+    } else {
+      selectedTeamMemberId = index;
+    }
+    updateProfileDisplay();
+    updateNameItemSelection();
+  }
+
+  function updateProfileDisplay() {
+    const profileToShow = hoveredTeamMemberId !== null ? hoveredTeamMemberId : selectedTeamMemberId;
+    const wrapper = document.getElementById('aboutProfileWrapper');
+    const imageEl = document.getElementById('aboutProfileImage');
+    const bioEl = document.getElementById('aboutProfileBio');
+
+    if (profileToShow !== null && teamMembers[profileToShow]) {
+      const member = teamMembers[profileToShow];
+      wrapper.style.display = 'block';
+      imageEl.src = member.profilePictureUrl || '';
+      imageEl.alt = `${member.firstName} ${member.lastName}`;
+      bioEl.textContent = member.bio || '';
+    } else {
+      wrapper.style.display = 'none';
+    }
+  }
+
+  function updateNameItemSelection() {
+    document.querySelectorAll('.about-name-item').forEach((item, idx) => {
+      if (idx === selectedTeamMemberId) {
+        item.classList.add('selected');
+      } else {
+        item.classList.remove('selected');
+      }
+    });
+  }
+
+  let scrambleInterval = null;
+  const originalText = 'RESEARCH*AND*DEVELOPMENT*';
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()';
+
+  function scrambleText(element, targetText, duration = 800) {
+    if (scrambleInterval) {
+      clearInterval(scrambleInterval);
+    }
+    
+    const steps = Math.floor(duration / 40);
+    let step = 0;
+    const textPaths = element.querySelectorAll('textPath');
+    if (!textPaths || textPaths.length === 0) return;
+    
+    scrambleInterval = setInterval(() => {
+      let scrambled = '';
+      const progress = step / steps;
+      
+      for (let i = 0; i < targetText.length; i++) {
+        if (targetText[i] === ' ') {
+          scrambled += ' ';
+          continue;
+        }
+        
+        if (progress * targetText.length > i) {
+          scrambled += targetText[i];
+        } else {
+          scrambled += chars[Math.floor(Math.random() * chars.length)];
+        }
+      }
+      
+      // Update all textPath elements
+      textPaths.forEach(textPath => {
+        textPath.textContent = scrambled;
+      });
+      step++;
+      
+      if (step > steps) {
+        clearInterval(scrambleInterval);
+        textPaths.forEach(textPath => {
+          textPath.textContent = targetText;
+        });
+        scrambleInterval = null;
+      }
+    }, 40);
+  }
+
+  function showAboutContact() {
+    const contactText = document.getElementById('aboutContactText');
+    const circularText = document.getElementById('circularTextElement');
+    
+    if (circularText) {
+      const textPaths = circularText.querySelectorAll('textPath');
+      if (textPaths && textPaths.length > 0) {
+        scrambleText(circularText, originalText, 600);
+      }
+    }
+    
+    if (contactText) {
+      contactText.style.opacity = '1';
+      contactText.style.visibility = 'visible';
+    }
+  }
+
+  function hideAboutContact() {
+    const contactText = document.getElementById('aboutContactText');
+    
+    if (scrambleInterval) {
+      clearInterval(scrambleInterval);
+      scrambleInterval = null;
+    }
+    
+    if (contactText) {
+      contactText.style.opacity = '0';
+      contactText.style.visibility = 'hidden';
+    }
+  }
+
+  function toggleMobileTalentBio(imgEl) {
+    const card = imgEl.closest('.about-mobile-talent-card');
+    const imageWrapper = card.querySelector('.about-mobile-image-wrapper');
+    const memberIndex = Array.from(card.parentElement.children).indexOf(card);
+    const member = teamMembers[memberIndex];
+    
+    if (!member) return;
+
+    const currentContent = imageWrapper.innerHTML;
+    if (currentContent.includes('about-mobile-talent-bio')) {
+      // Show image
+      imageWrapper.innerHTML = `<img src="${member.profilePictureUrl}" alt="${member.firstName} ${member.lastName}" class="about-mobile-talent-image" onclick="toggleMobileTalentBio(this)" />`;
+    } else {
+      // Show bio
+      imageWrapper.innerHTML = `
+        <div class="about-mobile-talent-bio" onclick="toggleMobileTalentBio(this)">
+          ${member.bio}
+        </div>
+      `;
+    }
+  }
+
+  // Mobile menu toggle
+  document.addEventListener('DOMContentLoaded', function() {
+    const mobileMenu = document.getElementById('aboutMobileMenu');
+    const dropdownContent = document.getElementById('aboutMobileContent');
+    const dropdownIcon = document.querySelector('.about-mobile-dropdown-icon');
+    
+    if (mobileMenu && dropdownContent) {
+      let isOpen = true;
+      mobileMenu.addEventListener('click', function() {
+        isOpen = !isOpen;
+        dropdownContent.style.display = isOpen ? 'block' : 'none';
+        dropdownContent.style.borderBottom = isOpen ? '1px solid #000' : 'none';
+        dropdownContent.style.padding = isOpen ? '1rem 1.5rem' : '0 1.5rem';
+        dropdownContent.style.maxHeight = isOpen ? '500px' : '0';
+        if (dropdownIcon) {
+          dropdownIcon.textContent = isOpen ? '▼' : '▶';
+        }
+      });
+    }
+
+    // Wait for ContentfulAPI then load data
+    waitForContentfulAPI(loadAboutPageData);
+  });
+
+  // Responsive view switching
+  function checkViewport() {
+    const mobileView = document.querySelector('.about-mobile-view');
+    const desktopView = document.querySelector('.about-desktop-view');
+    const bottomContainer = document.querySelector('.about-bottom-left-container');
+    
+    if (window.innerWidth <= 840) {
+      if (mobileView) mobileView.style.display = 'block';
+      if (desktopView) desktopView.style.display = 'none';
+      if (bottomContainer) bottomContainer.style.display = 'none';
+    } else {
+      if (mobileView) mobileView.style.display = 'none';
+      if (desktopView) desktopView.style.display = 'block';
+      if (bottomContainer) bottomContainer.style.display = 'flex';
+    }
+  }
+
+  window.addEventListener('resize', checkViewport);
+  checkViewport();
+</script>
+
 <style>
+  .about-page-wrapper {
+    min-height: calc(100vh - 40px);
+  }
+
+  /* Desktop View */
+  .about-desktop-view {
+    display: block;
+  }
+
   .about-container {
     display: flex;
     align-items: flex-start;
@@ -47,13 +416,129 @@
   }
 
   .about-content {
-    font-family: 'Helvetica Neue LT Com', sans-serif;
-    font-size: 1.5rem;
-    line-height: 1.4;
+    font-family: 'Helvetica Neue LT Com', sans-serif !important;
+    font-size: 1.5rem !important;
+    line-height: 1.4 !important;
     text-transform: uppercase;
+    color: black !important;
+    font-weight: bold !important;
+  }
+  
+  .about-content p,
+  .about-content div {
+    font-family: 'Helvetica Neue LT Com', sans-serif !important;
+    font-size: 1.5rem !important;
+    line-height: 1.4 !important;
+    text-transform: uppercase !important;
+    color: black !important;
+    font-weight: bold !important;
+    margin: 0;
+    padding: 0;
+  }
+  
+  .about-content span,
+  .about-content strong,
+  .about-content em {
+    font-family: 'Helvetica Neue LT Com', sans-serif !important;
+    font-size: inherit !important;
+    line-height: inherit !important;
+    text-transform: uppercase !important;
+    color: inherit !important;
+    font-weight: bold !important;
   }
 
-  .about-team-section {
+  .about-bottom-left-container {
+    position: fixed !important;
+    left: 2rem;
+    bottom: 2rem;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+  
+  .about-circular-text-holder {
+    position: relative;
+    display: inline-block;
+    pointer-events: all;
+  }
+
+  .about-circular-text-wrapper {
+    width: 200px;
+    height: 200px;
+    cursor: pointer;
+    transition: transform 0.3s ease;
+    position: relative;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+  }
+
+  .about-circular-svg {
+    width: 100%;
+    height: 100%;
+    animation: about-spin 3s linear infinite;
+    transition: animation-duration 0.3s ease;
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  .about-circular-text-wrapper:hover .about-circular-svg {
+    animation-duration: 1s;
+  }
+
+  @keyframes about-spin {
+    from { transform: rotate(0deg) translate3d(0, 0, 0); }
+    to { transform: rotate(360deg) translate3d(0, 0, 0); }
+  }
+
+  .about-circular-text {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-weight: bold;
+    font-size: 14px;
+  }
+
+  .about-contact-text {
+    position: fixed !important;
+    left: calc(2rem + 220px);
+    bottom: calc(2rem + 100px);
+    transform: translateY(-50%);
+    color: black;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 1rem;
+    padding: 0.5rem 1rem;
+    border-radius: 2rem;
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
+    white-space: nowrap;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    z-index: 101;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+  
+  .about-circular-text-holder:hover .about-contact-text {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  .about-names-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     font-family: 'Helvetica Neue LT Com', sans-serif;
     color: black;
     margin-top: 30vh;
@@ -66,21 +551,198 @@
     text-transform: uppercase;
   }
 
+  .about-name-item {
+    transition: color 0.2s, background 0.2s;
+    cursor: pointer;
+    border-radius: 4px;
+    padding: 2px 4px;
+  }
+
+  .about-name-item.selected,
+  .about-name-item:hover {
+    color: #1404fb;
+  }
+
+  .about-scrambled-name {
+    display: inline;
+    line-height: 1.05;
+  }
+
+  .about-profile-wrapper {
+    position: fixed;
+    top: 2.55rem;
+    right: 0rem;
+    width: min(20vw, 350px);
+    z-index: 1000;
+    pointer-events: none;
+  }
+
+  .about-profile-preview {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: contain;
+    border: none;
+  }
+
+  .about-profile-bio {
+    width: 100%;
+    color: black;
+    background: white;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: clamp(0.9rem, 2vw, 0.8rem);
+    line-height: 1.3;
+    border: none;
+    padding: 0.5rem 0;
+    text-transform: none;
+  }
+
+  /* Mobile View */
+  .about-mobile-view {
+    display: none;
+  }
+
+  .about-mobile-top-menu {
+    width: 100vw;
+    height: 40px;
+    background: #fff;
+    border-bottom: 1px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 0.4rem;
+    box-sizing: border-box;
+    cursor: pointer;
+  }
+
+  .about-mobile-menu-label {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #000;
+    margin-top: 0.2rem;
+  }
+
+  .about-mobile-dropdown-icon {
+    font-size: 0.6rem;
+    color: #000;
+    margin-top: 0.1rem;
+  }
+
+  .about-mobile-dropdown-content {
+    width: 100vw;
+    background: #fff;
+    border-bottom: 1px solid #000;
+    box-sizing: border-box;
+    padding: 1rem 1.5rem;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 0.95rem;
+    color: #222;
+    transition: max-height 0.3s, padding 0.3s;
+  }
+
+  .about-mobile-talent-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    width: 100vw;
+    gap: 0;
+    background-color: #fff;
+    padding-bottom: 10rem;
+  }
+
+  .about-mobile-talent-card {
+    display: flex;
+    flex-direction: column;
+    aspect-ratio: 0.75/1;
+    overflow: hidden;
+    border-right: 1px solid #000;
+    box-sizing: border-box;
+  }
+
+  .about-mobile-talent-card:nth-child(2n) {
+    border-right: none;
+  }
+
+  .about-mobile-image-wrapper {
+    width: 100%;
+    flex: 1 1 0;
+    overflow: hidden;
+    border-bottom: 1px solid #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .about-mobile-talent-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    cursor: pointer;
+  }
+
+  .about-mobile-talent-bio {
+    width: 100%;
+    height: 100%;
+    color: black;
+    background: white;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: clamp(0.4rem, 1.7vw, 0.6rem);
+    line-height: 1.3;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 1.2rem 1rem 0 1rem;
+    box-sizing: border-box;
+    cursor: pointer;
+    overflow-wrap: break-word;
+    word-break: break-word;
+    overflow-y: auto;
+  }
+
+  .about-mobile-talent-info {
+    background: #fff;
+    border-bottom: 1px solid #000;
+    padding: 0.1rem 0;
+    margin-top: 0.15rem;
+    min-height: 2.2em;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  .about-mobile-talent-name {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 0.7rem;
+    color: #000;
+    text-transform: uppercase;
+    text-align: left;
+    margin-left: 0.2rem;
+    margin-bottom: -0.1em;
+    font-weight: 600;
+  }
+
+  .about-mobile-talent-role {
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    font-size: 0.62rem;
+    color: #444;
+    text-align: left;
+    margin-left: 0.23rem;
+    text-transform: uppercase;
+    font-weight: 400;
+    letter-spacing: 0.03em;
+    opacity: 0.8;
+  }
+
   @media (max-width: 840px) {
-    .about-container {
-      flex-direction: column;
-      margin-left: 0;
+    .about-desktop-view {
+      display: none;
     }
-
-    .about-info-box {
-      width: 100%;
-      margin-left: 0;
-    }
-
-    .about-team-section {
-      margin-top: 2rem;
-      margin-left: 0;
+    .about-mobile-view {
+      display: block;
     }
   }
 </style>
-

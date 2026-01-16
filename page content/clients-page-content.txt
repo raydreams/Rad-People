@@ -1,0 +1,23 @@
+CLIENTS PAGE CONTENT
+
+This page loads content automatically from Contentful.
+No manual content entry needed!
+
+However, if you want to add fallback content, you can paste this in the page editor:
+
+---
+
+CLIENTS
+
+[Client information loads automatically from Contentful]
+
+---
+
+Note: The page will automatically fetch and display:
+- Client slideshow (desktop)
+- Interactive table (desktop)
+- Vertical scroll with navigation (mobile)
+- Client names, descriptions, status
+
+No manual setup required!
+

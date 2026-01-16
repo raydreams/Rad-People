@@ -1,0 +1,197 @@
+{% comment %}
+  Event Detail Page - Loads event from Contentful based on URL params
+{% endcomment %}
+
+{{ 'contentful-api.js' | asset_url | script_tag }}
+
+<div class="event-detail-page-wrapper" id="eventDetailPage" style="min-height: calc(100vh - 40px); position: relative; top: 40px; background-color: white;">
+  <div id="eventDetailLoading" style="display: block; padding: 4rem; text-align: center; font-family: 'Helvetica Neue LT Com', sans-serif;">
+    Loading event...
+  </div>
+  
+  <div id="eventDetailContent" style="display: none;">
+    <!-- Content will be loaded by JavaScript -->
+  </div>
+</div>
+
+<script>
+  let eventId = null;
+  
+  // Get event ID from URL
+  const urlParams = new URLSearchParams(window.location.search);
+  eventId = urlParams.get('id') || sessionStorage.getItem('selectedEventId');
+  
+  // Also check hash
+  if (!eventId && window.location.hash) {
+    const hashMatch = window.location.hash.match(/events\/([^/]+)/);
+    if (hashMatch) {
+      eventId = hashMatch[1];
+    }
+  }
+  
+  async function loadEventDetail() {
+    if (!eventId) {
+      document.getElementById('eventDetailLoading').innerHTML = 'Event not found. <a href="/pages/events">Back to Events</a>';
+      return;
+    }
+    
+    try {
+      // Wait for Contentful API
+      function waitForContentfulAPI(callback, maxAttempts = 50) {
+        let attempts = 0;
+        const checkInterval = setInterval(() => {
+          attempts++;
+          if (typeof window.ContentfulAPI !== 'undefined') {
+            clearInterval(checkInterval);
+            callback();
+          } else if (attempts >= maxAttempts) {
+            clearInterval(checkInterval);
+            document.getElementById('eventDetailLoading').innerHTML = 'Unable to load event data.';
+          }
+        }, 100);
+      }
+      
+      waitForContentfulAPI(async () => {
+        try {
+          const events = await window.ContentfulAPI.fetchEvents();
+          const event = events.find(e => e.id === eventId);
+          
+          if (!event) {
+            document.getElementById('eventDetailLoading').innerHTML = 'Event not found. <a href="/pages/events">Back to Events</a>';
+            return;
+          }
+          
+          renderEventDetail(event);
+        } catch (error) {
+          console.error('Error loading event:', error);
+          document.getElementById('eventDetailLoading').innerHTML = 'Error loading event.';
+        }
+      });
+    } catch (error) {
+      console.error('Error:', error);
+      document.getElementById('eventDetailLoading').innerHTML = 'Error loading event.';
+    }
+  }
+  
+  function renderEventDetail(event) {
+    const loading = document.getElementById('eventDetailLoading');
+    const content = document.getElementById('eventDetailContent');
+    
+    loading.style.display = 'none';
+    content.style.display = 'block';
+    
+    const videoId = event.wistiaVideoId && typeof event.wistiaVideoId === 'string' && /^[a-zA-Z0-9_-]+$/.test(event.wistiaVideoId.trim()) 
+      ? event.wistiaVideoId.trim() 
+      : null;
+    const imageUrl = event.thumbnailImageUrl || '';
+    
+    // Format date
+    function formatDate(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+    
+    function formatDateShort(dateString) {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', {
+        month: '2-digit',
+        day: '2-digit',
+        year: '2-digit'
+      }).replace(/\//g, '.');
+    }
+    
+    const isMobile = window.innerWidth <= 767;
+    
+    if (isMobile) {
+      content.innerHTML = `
+        <div style="position: relative; min-height: 100vh;">
+          <div style="padding: 1rem; border-bottom: 1px solid black;">
+            <a href="/pages/events" style="display: flex; align-items: center; gap: 0.5rem; font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 0.9rem; color: black; text-decoration: none; text-transform: uppercase;">
+              ← BACK TO EVENTS
+            </a>
+          </div>
+          
+          ${imageUrl ? `
+            <div style="width: 100%; height: 50vh; background-image: url(${imageUrl}); background-size: cover; background-position: center;"></div>
+          ` : ''}
+          
+          <div style="padding: 2rem 1rem;">
+            <h1 style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1.5rem; text-transform: uppercase; margin-bottom: 1rem;">${event.name}</h1>
+            
+            ${event.date ? `<div style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1rem; margin-bottom: 0.5rem;">${formatDate(event.date)}</div>` : ''}
+            ${event.time ? `<div style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1rem; margin-bottom: 0.5rem;">${event.time}</div>` : ''}
+            ${event.location ? `<div style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1rem; margin-bottom: 1rem;">📍 ${event.location}</div>` : ''}
+            
+            ${event.description ? `<div style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 0.9rem; line-height: 1.6; margin-top: 2rem; white-space: pre-wrap;">${event.description}</div>` : ''}
+          </div>
+        </div>
+      `;
+    } else {
+      content.innerHTML = `
+        <div style="position: fixed; top: 40px; left: 0; right: 0; bottom: 0; overflow: hidden;">
+          ${videoId ? `
+            <div class="wistia-video-background" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+              <div class="wistia_embed wistia_async_${videoId}" style="width: 100%; height: 100%;"></div>
+            </div>
+          ` : imageUrl ? `
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background-image: url(${imageUrl}); background-size: cover; background-position: center;"></div>
+          ` : ''}
+          
+          <div style="position: absolute; top: 2rem; left: 2rem; z-index: 10;">
+            <a href="/pages/events" style="display: flex; align-items: center; gap: 0.5rem; font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 0.9rem; color: white; text-decoration: none; text-transform: uppercase; background: rgba(0,0,0,0.5); padding: 0.5rem 1rem;">
+              ← BACK TO EVENTS
+            </a>
+          </div>
+          
+          <div style="position: absolute; right: 2rem; top: 50%; transform: translateY(-50%); max-width: 400px; background: white; padding: 2rem; z-index: 10;">
+            <h1 style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1.8rem; text-transform: uppercase; margin-bottom: 1.5rem;">${event.name}</h1>
+            
+            ${event.date ? `<div style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1rem; margin-bottom: 0.5rem;">${formatDate(event.date)}</div>` : ''}
+            ${event.time ? `<div style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1rem; margin-bottom: 0.5rem;">${event.time}</div>` : ''}
+            ${event.location ? `<div style="font-family: 'Helvetica Neue LT Com', sans-serif; font-size: 1rem; margin-bottom: 1.5rem;">📍 ${event.location}</div>` : ''}
+            
+            ${event.description ? `<div style="font-family: 'Sequel Sans Regular', sans-serif; font-size: 0.9rem; line-height: 1.6; white-space: pre-wrap;">${event.description}</div>` : ''}
+          </div>
+        </div>
+      `;
+      
+      // Load Wistia if needed
+      if (videoId) {
+        window._wq = window._wq || [];
+        if (!window.wistiaScriptsLoaded) {
+          const script = document.createElement('script');
+          script.src = 'https://fast.wistia.com/assets/external/E-v1.js';
+          script.async = true;
+          document.head.appendChild(script);
+          window.wistiaScriptsLoaded = true;
+        }
+        window._wq.push({
+          id: videoId,
+          options: { autoplay: true, muted: true, loop: true }
+        });
+      }
+    }
+  }
+  
+  // Update events page links to use this template
+  document.addEventListener('DOMContentLoaded', function() {
+    // Update all event links to use query param
+    document.querySelectorAll('a[href*="/events/"]').forEach(link => {
+      const href = link.getAttribute('href');
+      const match = href.match(/\/events\/([^/]+)/);
+      if (match) {
+        link.setAttribute('href', `/pages/event-detail?id=${match[1]}`);
+      }
+    });
+  });
+  
+  loadEventDetail();
+</script>
+

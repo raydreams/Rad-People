@@ -1,0 +1,163 @@
+/* Global Styles */
+@font-face {
+  font-family: 'NF Ultra';
+  src: url('https://cdn.shopify.com/s/files/1/0788/1028/4265/files/NFUltra-Regular.otf?v=1768527702') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Helvetica Neue LT Com';
+  src: url('https://cdn.shopify.com/s/files/1/0788/1028/4265/files/Helvetica_Neue_LT_Com_77_Bold_Condensed.ttf?v=1768527702') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'MotoyaExCedar';
+  src: url('https://cdn.shopify.com/s/files/1/0788/1028/4265/files/MotoyaExCedar_W55_W7_KP.ttf?v=1768527703') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sequel Sans';
+  src: url('https://cdn.shopify.com/s/files/1/0788/1028/4265/files/sequel-sans-black-display.ttf?v=1768527702') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Sequel Sans Regular';
+  src: url('https://cdn.shopify.com/s/files/1/0788/1028/4265/files/Sequel_Sans_Book_Body.ttf?v=1768527702') format('truetype');
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #fafbfc inset !important;
+  box-shadow: 0 0 0 1000px #fafbfc inset !important;
+  -webkit-text-fill-color: #222 !important;
+  caret-color: #222 !important;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
+button:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: white;
+  color: white;
+  padding-top: 40px;
+}
+
+body {
+  overflow-x: hidden;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: white;
+  color: white;
+  padding-top: 40px;
+}
+
+.nf-ultra-text {
+  font-family: 'NF Ultra', sans-serif;
+}
+
+.helvetica-neue-text {
+  font-family: 'Helvetica Neue LT Com', sans-serif;
+  font-weight: bold;
+}
+
+/* Hide scrollbars */
+::-webkit-scrollbar {
+  display: none;
+}
+
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+/* Hide skip to content link - accessibility link that should only be visible when focused */
+.skip-to-content-link,
+.visually-hidden {
+  position: absolute !important;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  clip: rect(0 0 0 0);
+  word-wrap: normal !important;
+  left: -9999px;
+}
+
+.skip-to-content-link:focus {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  z-index: 10000;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.5rem 1rem;
+  background: #1404FB;
+  color: white;
+  text-decoration: none;
+  clip: auto;
+}
+
+html, body {
+  overflow-y: scroll;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* Layout */
+.main-content {
+  max-width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  min-width: 320px;
+  overflow-x: hidden;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+}
+
+.main-content main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #FFFFFF;
+}
+

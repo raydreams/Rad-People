@@ -14,7 +14,7 @@
   transform: translateX(-50%);
   gap: 0;
   background-color: #FFFFFF;
-  margin-top: 70px; /* Account for navbar + filter menu */
+  margin-top: 30px;
 }
 
 .product-grid[data-columns="2"] {
@@ -36,7 +36,7 @@
   .product-grid {
     grid-template-columns: repeat(2, 1fr);
     padding-bottom: calc(100vw / 2 * (22/17));
-    margin-top: 70px;
+    margin-top: 30px;
   }
 }
 
@@ -46,6 +46,36 @@
   display: block;
   border-bottom: 1px solid #000000;
   border-right: 1px solid #000000;
+}
+
+/* First column items */
+.product-grid[data-columns="2"] .product-link:nth-child(2n+1),
+.product-grid[data-columns="4"] .product-link:nth-child(4n+1),
+.product-grid[data-columns="8"] .product-link:nth-child(8n+1) {
+  @media (min-width: 769px) {
+    border-left: none;
+  }
+}
+
+/* Last column items */
+.product-grid[data-columns="2"] .product-link:nth-child(2n),
+.product-grid[data-columns="4"] .product-link:nth-child(4n),
+.product-grid[data-columns="8"] .product-link:nth-child(8n) {
+  @media (min-width: 769px) {
+    border-right: none;
+    margin-right: 1px;
+  }
+}
+
+/* Mobile layout adjustments */
+@media (max-width: 768px) {
+  .product-link:nth-child(2n+1) {
+    border-left: none;
+  }
+  .product-link:nth-child(2n) {
+    border-right: none;
+    margin-right: 1px;
+  }
 }
 
 .product-card {
@@ -139,17 +169,44 @@
   padding: 0 max(5px, calc((100vw - 100%) / 2));
 }
 
-.grid-button,
-.sort-button {
-  font-family: 'Helvetica Neue LT Com', sans-serif;
-  font-size: 0.9rem;
+.grid-button {
+  width: fit-content;
+  height: 100%;
   color: black;
-  background: none;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  font-size: 11px;
   border: none;
+  background: #fff;
   cursor: pointer;
-  padding: 2px 5px;
+  padding: 0;
+  margin-left: 10px;
   text-transform: uppercase;
-  position: relative;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.sort-button {
+  width: fit-content;
+  height: 100%;
+  color: black;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  font-size: 11px;
+  border: none;
+  background: #fff;
+  cursor: pointer;
+  padding: 0;
+  margin-right: 5px;
+  text-transform: uppercase;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+@media (max-width: 768px) {
+  .sort-button {
+    margin-left: 10px;
+  }
 }
 
 .grid-button:hover,
@@ -157,18 +214,48 @@
   color: #1404FB;
 }
 
-.view-modal,
-.sort-modal {
+.view-modal {
   position: absolute;
   top: 100%;
   left: 0;
-  background-color: white;
-  border: 1px solid black;
-  border-top: none;
+  width: 235px;
+  height: 50px;
+  background: white;
+  z-index: 30;
+  justify-content: space-evenly;
+  align-items: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border: 1px solid #000000;
+  border-left: none;
   display: none;
+}
+
+.sort-modal {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  left: auto;
+  width: 300px;
+  height: auto;
+  background: white;
+  z-index: 30;
   flex-direction: column;
-  z-index: 1000;
-  min-width: 100px;
+  padding: 10px 0;
+  gap: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  border: 1px solid #000000;
+  border-right: none;
+  border-left: 1px solid #000000;
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sort-modal {
+    right: auto;
+    left: 0;
+    border-left: none;
+    border-right: 1px solid #000000;
+  }
 }
 
 .view-modal.open,
@@ -177,29 +264,44 @@
 }
 
 .modal-button {
-  padding: 8px 12px;
-  background: none;
-  border: none;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  padding: 5px 15px;
+  width: 60px;
+  border: 1px solid #E5E5E5;
+  background: white;
   cursor: pointer;
-  text-align: left;
-  font-family: 'Helvetica Neue LT Com', sans-serif;
-  font-size: 0.9rem;
+  border-radius: 0;
+  font-size: 11px;
   color: black;
+  text-transform: uppercase;
+  outline: none;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.view-modal .modal-button {
+  width: 60px;
+}
+
+.sort-modal .modal-button {
+  width: 90%;
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 11px;
+  border: 1px solid #E5E5E5;
   border-bottom: 1px solid #e0e0e0;
 }
 
-.modal-button:last-child {
+.sort-modal .modal-button:last-child {
   border-bottom: none;
 }
 
 .modal-button:hover {
-  background-color: #f5f5f5;
-  color: #1404FB;
+  border-color: #000000;
 }
 
 .modal-button.active {
-  color: #1404FB;
-  font-weight: bold;
+  border-color: #000000;
 }
 
 /* Product Details Styles */
@@ -274,6 +376,8 @@
     overflow-y: hidden;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-behavior: smooth;
   }
 }
 
@@ -315,41 +419,72 @@
   .product-summary {
     max-width: 100%;
     border-left: none;
-    padding: 20px;
-    position: static;
+    padding: 0px;
+    position: relative;
+    margin-top: 8px;
   }
 }
 
 .title-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #000000;
-  padding-bottom: 10px;
+  align-items: center;
+  margin: 30px 0 10px 0;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .title-row {
+    margin: 0px 0 0 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e7e9eb;
+  }
 }
 
 .product-title {
-  font-family: 'Helvetica Neue LT Com', sans-serif;
-  font-size: 1.5rem;
-  color: #000000;
-  text-transform: uppercase;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  font-size: 17px;
   margin: 0;
+  color: black;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .product-title {
+    font-size: 13px;
+    margin-left: 10px;
+  }
 }
 
 .product-price-detail {
-  font-family: 'Helvetica Neue LT Com', sans-serif;
-  font-size: 1.5rem;
-  color: #000000;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  font-size: 17px;
+  color: black;
   margin: 0;
+  margin-right: 10px;
+}
+
+@media (max-width: 768px) {
+  .product-price-detail {
+    font-size: 13px;
+  }
 }
 
 .product-description {
   font-family: 'Sequel Sans Regular', sans-serif;
-  font-size: 0.9rem;
-  line-height: 1.6;
-  color: #000000;
-  margin-bottom: 20px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: black;
+  margin: 0 0 15px 0;
+  padding-right: 15px;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+@media (max-width: 768px) {
+  .product-description {
+    margin-left: 10px;
+  }
 }
 
 .description-item {
@@ -360,59 +495,118 @@
   margin-top: 20px;
 }
 
+@media (max-width: 768px) {
+  .product-options {
+    padding-bottom: 20px;
+    border-bottom: 2px solid #e7e9eb;
+  }
+}
+
 .product-color {
-  font-family: 'Helvetica Neue LT Com', sans-serif;
-  font-size: 0.9rem;
-  color: #000000;
-  margin-bottom: 15px;
-  text-transform: uppercase;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  font-size: 12px;
+  color: black;
+  margin: 0 0 20px 0;
+}
+
+@media (max-width: 768px) {
+  .product-color {
+    margin-top: 5px;
+    margin-left: 10px;
+    margin-right: 10px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e7e9eb;
+  }
 }
 
 .sizes-container {
   display: flex;
-  flex-wrap: wrap;
   gap: 10px;
-  margin-bottom: 20px;
+  flex-wrap: wrap;
+  margin: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .sizes-container {
+    margin-left: 10px;
+  }
 }
 
 .size-button {
-  padding: 8px 16px;
-  border: 1px solid #000000;
-  background-color: white;
+  padding: 12px 20px;
+  border: 1px solid transparent;
+  background-color: #edeff1;
   color: #000000;
   cursor: pointer;
-  font-family: 'Helvetica Neue LT Com', sans-serif;
-  font-size: 0.9rem;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  font-size: 12px;
   text-transform: uppercase;
   transition: all 0.3s ease;
+  min-width: 60px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+  visibility: visible !important;
+  opacity: 1 !important;
 }
 
 .size-button:hover {
-  background-color: #f5f5f5;
+  border-color: #000000;
+  background-color: #edeff1;
 }
 
 .size-button.selected {
-  background-color: #1404FB;
-  color: white;
-  border-color: #1404FB;
+  background-color: #edeff1;
+  color: #000000;
+  border-color: #000000;
+}
+
+@media (max-width: 768px) {
+  .size-button:active {
+    border-color: #000000;
+    background-color: #edeff1;
+    transition: none;
+  }
 }
 
 .add-to-cart-button {
-  width: 100%;
-  padding: 15px;
+  width: calc(100% - 30px);
+  padding: 15px 0;
   background-color: #1404FB;
-  color: white;
-  border: none;
+  color: #FFFFFF;
+  border: 1px solid #000000;
   cursor: pointer;
-  font-family: 'Helvetica Neue LT Com', sans-serif;
-  font-size: 1rem;
+  font-family: 'Sequel Sans Regular', sans-serif;
+  font-size: 12px;
   text-transform: uppercase;
-  margin-bottom: 15px;
-  transition: background-color 0.3s ease;
+  margin: 0px 15px 0 0;
+  transition: all 0.2s ease;
+  border-radius: 0;
+  -webkit-tap-highlight-color: transparent;
 }
 
-.add-to-cart-button:hover:not(:disabled) {
-  background-color: #0e03b3;
+@media (max-width: 768px) {
+  .add-to-cart-button {
+    width: calc(100% - 20px);
+    margin: 0 10px;
+  }
+  .add-to-cart-button:active {
+    background-color: #FFFFFF;
+    color: #000000;
+    transition: none;
+  }
+}
+
+@media (min-width: 769px) {
+  .add-to-cart-button:hover:not(:disabled) {
+    background-color: #FFFFFF;
+    color: #000000;
+    border-color: #1404FB;
+  }
 }
 
 .add-to-cart-button:disabled {
@@ -420,11 +614,28 @@
   cursor: not-allowed;
 }
 
+.add-to-cart-button:focus {
+  outline: none;
+}
+
 .shipping-container {
+  width: calc(100% - 30px);
+  padding: 15px 0;
+  background-color: #edeff1;
+  color: #000000;
+  border: none;
   font-family: 'Sequel Sans Regular', sans-serif;
-  font-size: 0.85rem;
-  color: #666;
-  margin-top: 10px;
+  font-size: 12px;
+  text-align: center;
+  margin: 15px 15px 0 0;
+  text-transform: uppercase;
+}
+
+@media (max-width: 768px) {
+  .shipping-container {
+    width: calc(100% - 20px);
+    margin: 15px 10px 0;
+  }
 }
 
 .feedback-message {

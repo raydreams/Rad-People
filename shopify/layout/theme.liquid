@@ -10,7 +10,19 @@
 
     {%- if settings.favicon != blank -%}
       <link rel="icon" type="image/png" href="{{ settings.favicon | image_url: width: 32, height: 32 }}">
+      <link rel="apple-touch-icon" href="{{ settings.favicon | image_url: width: 180, height: 180 }}">
+    {%- else -%}
+      {% comment %} Use CDN favicon URL {% endcomment %}
+      <link rel="icon" type="image/png" href="https://cdn.shopify.com/s/files/1/0788/1028/4265/files/RP.png?v=1768527702">
+      <link rel="apple-touch-icon" href="https://cdn.shopify.com/s/files/1/0788/1028/4265/files/RP.png?v=1768527702">
     {%- endif -%}
+    
+    {% comment %} Preload fonts from CDN {% endcomment %}
+    <link rel="preload" href="https://cdn.shopify.com/s/files/1/0788/1028/4265/files/NFUltra-Regular.otf?v=1768527702" as="font" type="font/otf" crossorigin>
+    <link rel="preload" href="https://cdn.shopify.com/s/files/1/0788/1028/4265/files/Helvetica_Neue_LT_Com_77_Bold_Condensed.ttf?v=1768527702" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="https://cdn.shopify.com/s/files/1/0788/1028/4265/files/sequel-sans-black-display.ttf?v=1768527702" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="https://cdn.shopify.com/s/files/1/0788/1028/4265/files/Sequel_Sans_Book_Body.ttf?v=1768527702" as="font" type="font/ttf" crossorigin>
+    <link rel="preload" href="https://cdn.shopify.com/s/files/1/0788/1028/4265/files/MotoyaExCedar_W55_W7_KP.ttf?v=1768527703" as="font" type="font/ttf" crossorigin>
 
     {%- unless settings.type_header_font.system? and settings.type_body_font.system? -%}
       <link rel="preconnect" href="https://fonts.shopifycdn.com" crossorigin>
@@ -30,7 +42,7 @@
     {% render 'meta-tags' %}
 
     <!-- Styles -->
-    {{ 'theme.css' | asset_url | stylesheet_tag }}
+    {{ 'theme.css.liquid' | asset_url | stylesheet_tag }}
     {{ 'navbar.css' | asset_url | stylesheet_tag }}
     {{ 'footer.css' | asset_url | stylesheet_tag }}
 
@@ -43,7 +55,7 @@
   </head>
 
   <body class="gradient">
-    <a class="skip-to-content-link button visually-hidden" href="#MainContent">
+    <a class="skip-to-content-link button visually-hidden" href="#MainContent" style="position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden;">
       {{ 'accessibility.skip_to_text' | t }}
     </a>
 
@@ -51,11 +63,11 @@
       {%- render 'cart-notification' -%}
     {%- endif -%}
 
-    {% section 'announcement-bar' %}
     {% render 'navbar' %}
     {% render 'cart-drawer' %}
+    {% section 'announcement-bar' %}
 
-    <main id="MainContent" class="content-for-layout focus-none" role="main" tabindex="-1">
+    <main id="MainContent" class="content-for-layout focus-none" role="main" tabindex="-1" style="min-height: calc(100vh - 40px{% if settings.announcement_bar_enabled %} - 40px{% endif %}); display: flex; flex-direction: column; {% if settings.announcement_bar_enabled %}margin-top: 40px;{% else %}margin-top: 0;{% endif %}">
       {{ content_for_layout }}
     </main>
 

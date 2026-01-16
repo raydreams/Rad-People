@@ -1,19 +1,84 @@
+{% comment %}
+  Footer - Minimalistic design with newsletter and links
+{% endcomment %}
+
 <footer class="footer-container">
-  <div class="social-links-column">
-    <a href="mailto:contact@radpeople.us" class="social-link">
-      <span class="arrow-icon">↗</span>
-      Email
-    </a>
-    <a href="https://instagram.com/radpeople.rp" target="_blank" rel="noopener noreferrer" class="social-link">
-      <span class="arrow-icon">↗</span>
-      Instagram
-    </a>
-    <a href="https://twitter.com/radpeople" target="_blank" rel="noopener noreferrer" class="social-link">
-      <span class="arrow-icon">↗</span>
-      Twitter
-    </a>
+  <div class="footer-left-section">
+    <div class="social-links-column">
+      {% if settings.social_email != blank %}
+        <a href="mailto:{{ settings.social_email }}" class="social-link">
+          <span class="arrow-icon">↗</span>
+          Email
+        </a>
+      {% endif %}
+      {% if settings.social_instagram != blank %}
+        <a href="{{ settings.social_instagram }}" target="_blank" rel="noopener noreferrer" class="social-link">
+          <span class="arrow-icon">↗</span>
+          Instagram
+        </a>
+      {% endif %}
+      {% if settings.social_twitter != blank %}
+        <a href="{{ settings.social_twitter }}" target="_blank" rel="noopener noreferrer" class="social-link">
+          <span class="arrow-icon">↗</span>
+          Twitter
+        </a>
+      {% endif %}
+    </div>
+    
+    <div class="footer-newsletter-section">
+      <h3 class="footer-newsletter-title">SUBSCRIBE TO OUR NEWSLETTER</h3>
+      {% form 'customer', class: 'newsletter-form' %}
+        <div class="newsletter-input-group">
+          <input 
+            type="email" 
+            name="contact[email]" 
+            placeholder="E-mail address*" 
+            class="newsletter-input"
+            required
+          >
+          <button type="submit" class="newsletter-button">SEND</button>
+        </div>
+        <p class="newsletter-privacy">
+          By subscribing, you understand and agree to our 
+          <a href="{{ pages.privacy_policy.url | default: '#' }}" class="footer-link">Privacy Policy</a>.
+        </p>
+      {% endform %}
+    </div>
+    
+    <div class="footer-links-section">
+      <div class="footer-links-column">
+        <h4 class="footer-links-title">NAVIGATION</h4>
+        <ul class="footer-links-list">
+          <li><a href="{{ pages.about.url }}" class="footer-link">About</a></li>
+          <li><a href="{{ pages.gallery.url }}" class="footer-link">Gallery</a></li>
+          {% if collections.all %}
+            <li><a href="{{ collections.all.url }}" class="footer-link">Shop</a></li>
+          {% endif %}
+          <li><a href="{{ pages.events.url }}" class="footer-link">Events</a></li>
+          <li><a href="{{ pages.clients.url }}" class="footer-link">Clients</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-links-column">
+        <h4 class="footer-links-title">LEGAL</h4>
+        <ul class="footer-links-list">
+          {% if pages.privacy_policy %}
+            <li><a href="{{ pages.privacy_policy.url }}" class="footer-link">Privacy Policy</a></li>
+          {% endif %}
+          {% if pages.refund_policy %}
+            <li><a href="{{ pages.refund_policy.url }}" class="footer-link">Refund Policy</a></li>
+          {% endif %}
+          {% if pages.terms_of_service %}
+            <li><a href="{{ pages.terms_of_service.url }}" class="footer-link">Terms of Service</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
   </div>
 
-  <div class="copyright">&copy;{{ 'now' | date: '%Y' }}</div>
+  <div class="footer-right-section">
+    <div class="footer-brand-name">RADPEOPLE</div>
+    <div class="footer-powered-by">powered by shopify</div>
+    <div class="copyright">©2026</div>
+  </div>
 </footer>
-

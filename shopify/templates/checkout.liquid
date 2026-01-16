@@ -1,0 +1,148 @@
+{% comment %}
+  Checkout Page - Custom styling for Shopify checkout
+  Note: This template is for Shopify Plus checkout customization
+  For regular Shopify, checkout CSS can be added via theme settings
+{% endcomment %}
+
+<!DOCTYPE html>
+<html lang="{{ request.locale.iso_code }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Checkout - {{ shop.name }}</title>
+  {{ 'theme.css.liquid' | asset_url | stylesheet_tag }}
+  <style>
+    body {
+      font-family: 'Sequel Sans Regular', sans-serif;
+      background-color: #fafafa;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    
+    /* Checkout container styling */
+    .checkout-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    
+    /* Form inputs */
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="number"],
+    select,
+    textarea {
+      font-family: 'Sequel Sans Regular', sans-serif;
+      font-size: 1rem;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      background-color: white;
+      width: 100%;
+      box-sizing: border-box;
+      transition: border-color 0.3s ease;
+    }
+    
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      border-color: #1404FB;
+    }
+    
+    /* Buttons */
+    button[type="submit"],
+    .btn-primary {
+      font-family: 'Helvetica Neue LT Com', sans-serif;
+      font-size: 1rem;
+      text-transform: uppercase;
+      background-color: #1404FB;
+      color: white;
+      border: none;
+      padding: 1rem 2rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+      width: 100%;
+    }
+    
+    button[type="submit"]:hover,
+    .btn-primary:hover {
+      background-color: #0e03b3;
+    }
+    
+    /* Headings */
+    h1, h2, h3 {
+      font-family: 'Helvetica Neue LT Com', sans-serif;
+      text-transform: uppercase;
+      color: #000;
+    }
+    
+    /* Labels */
+    label {
+      font-family: 'Helvetica Neue LT Com', sans-serif;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      color: #000;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    
+    /* Cart summary */
+    .order-summary {
+      background-color: white;
+      border: 1px solid #ddd;
+      padding: 1.5rem;
+    }
+    
+    .order-summary__section {
+      border-bottom: 1px solid #eee;
+      padding-bottom: 1rem;
+      margin-bottom: 1rem;
+    }
+    
+    .order-summary__section:last-child {
+      border-bottom: none;
+    }
+    
+    /* Product items */
+    .product-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    
+    .product-table td {
+      padding: 1rem 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .product-table td:last-child {
+      text-align: right;
+      font-family: 'Helvetica Neue LT Com', sans-serif;
+      font-weight: bold;
+    }
+    
+    /* Totals */
+    .total-line {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.5rem 0;
+      font-family: 'Helvetica Neue LT Com', sans-serif;
+    }
+    
+    .total-line--final {
+      border-top: 2px solid #000;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="checkout-container">
+    {{ content_for_layout }}
+  </div>
+</body>
+</html>
+

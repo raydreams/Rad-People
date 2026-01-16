@@ -32,9 +32,11 @@
 .navbar-logo {
   font-family: 'NF Ultra', sans-serif;
   font-size: 0.8rem;
+  font-weight: normal;
   color: #1404FB;
   margin: 0;
   text-decoration: none;
+  text-transform: none;
 }
 
 .navbar-logo:hover {
@@ -96,10 +98,12 @@
   background: none;
   border: none;
   cursor: pointer;
-  padding: 0;
+  padding: 0 5px 0 0;
   text-transform: uppercase;
   transition: color 0.3s ease;
   position: relative;
+  white-space: nowrap;
+  margin-right: 10px;
 }
 
 .cart-link:hover {
@@ -155,8 +159,10 @@
 .mobile-logo {
   font-family: 'NF Ultra', sans-serif;
   font-size: 0.8rem;
+  font-weight: normal;
   color: #1404FB;
   text-decoration: none;
+  text-transform: none;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);

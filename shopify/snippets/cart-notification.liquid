@@ -1,0 +1,170 @@
+{% comment %}
+  Cart Notification - Shows when an item is added to cart
+  This is shown when cart_type is set to 'notification' in theme settings
+{% endcomment %}
+
+<div id="cart-notification" class="cart-notification" role="status" aria-live="polite" aria-hidden="true">
+  <div class="cart-notification__header">
+    <h2 id="cart-notification-title" class="cart-notification__title">Item added to your cart</h2>
+    <button type="button" class="cart-notification__close" aria-label="Close">
+      <span aria-hidden="true">&times;</span>
+    </button>
+  </div>
+  <div id="cart-notification-product" class="cart-notification-product"></div>
+  <div class="cart-notification__links">
+    <a href="{{ routes.cart_url }}" class="button button--secondary">View cart</a>
+    <button type="button" class="button cart-notification__close">Continue shopping</button>
+  </div>
+</div>
+
+<style>
+  .cart-notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    max-width: 400px;
+    z-index: 9999;
+    display: none;
+  }
+
+  .cart-notification[aria-hidden="false"] {
+    display: block;
+  }
+
+  .cart-notification__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+  }
+
+  .cart-notification__title {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: bold;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+  }
+
+  .cart-notification__close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    color: #666;
+  }
+
+  .cart-notification__close:hover {
+    color: #000;
+  }
+
+  .cart-notification-product {
+    margin-bottom: 15px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+
+  .cart-notification__links {
+    display: flex;
+    gap: 10px;
+  }
+
+  .cart-notification__links .button {
+    flex: 1;
+    padding: 10px 20px;
+    text-align: center;
+    text-decoration: none;
+    border: 1px solid #000;
+    background: white;
+    color: #000;
+    font-family: 'Helvetica Neue LT Com', sans-serif;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+
+  .cart-notification__links .button:hover {
+    background: #000;
+    color: white;
+  }
+
+  .button--secondary {
+    background: #1404FB;
+    color: white;
+    border-color: #1404FB;
+  }
+
+  .button--secondary:hover {
+    background: #0d03a8;
+  }
+</style>
+
+<script>
+  (function() {
+    const cartNotification = document.getElementById('cart-notification');
+    if (!cartNotification) return;
+
+    const closeButtons = cartNotification.querySelectorAll('.cart-notification__close');
+    const notificationTitle = document.getElementById('cart-notification-title');
+    const notificationProduct = document.getElementById('cart-notification-product');
+
+    function hideNotification() {
+      cartNotification.setAttribute('aria-hidden', 'true');
+      cartNotification.style.display = 'none';
+    }
+
+    function showNotification(product) {
+      if (product) {
+        notificationProduct.innerHTML = `
+          <div style="display: flex; gap: 15px; align-items: center;">
+            ${product.image ? `<img src="${product.image}" alt="${product.title}" style="width: 60px; height: 60px; object-fit: cover;">` : ''}
+            <div>
+              <div style="font-weight: bold; margin-bottom: 5px;">${product.title}</div>
+              <div>$${product.price}</div>
+            </div>
+          </div>
+        `;
+      }
+      cartNotification.setAttribute('aria-hidden', 'false');
+      cartNotification.style.display = 'block';
+
+      // Auto-hide after 5 seconds
+      setTimeout(hideNotification, 5000);
+    }
+
+    closeButtons.forEach(button => {
+      button.addEventListener('click', hideNotification);
+    });
+
+    // Listen for cart add events
+    document.addEventListener('cart:added', function(event) {
+      if (event.detail && event.detail.product) {
+        showNotification(event.detail.product);
+      }
+    });
+
+    // Also listen for any cart updates that might indicate an add
+    document.addEventListener('cart:updated', function() {
+      // Fetch latest cart item and show notification
+      fetch('{{ routes.cart_url }}.js')
+        .then(response => response.json())
+        .then(cart => {
+          if (cart.items && cart.items.length > 0) {
+            const lastItem = cart.items[cart.items.length - 1];
+            showNotification({
+              title: lastItem.product_title,
+              price: (lastItem.price / 100).toFixed(2),
+              image: lastItem.image || ''
+            });
+          }
+        })
+        .catch(error => console.error('Error fetching cart:', error));
+    });
+  })();
+</script>
+

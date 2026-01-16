@@ -1,0 +1,24 @@
+GALLERY PAGE CONTENT
+
+This page loads content automatically from Contentful.
+No manual content entry needed!
+
+However, if you want to add fallback content, you can paste this in the page editor:
+
+---
+
+GALLERY
+
+[Gallery images load automatically from Contentful]
+
+---
+
+Note: The page will automatically fetch and display:
+- Gallery images with navigation
+- Click navigation (left/right)
+- Arrow buttons
+- "VIEW ALL" overlay grid
+- Contact rectangle
+
+No manual setup required!
+

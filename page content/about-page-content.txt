@@ -1,0 +1,27 @@
+ABOUT PAGE CONTENT
+
+This page loads content automatically from Contentful.
+No manual content entry needed!
+
+However, if you want to add fallback content, you can paste this in the page editor:
+
+---
+
+About Us
+
+RADPEOPLE is a creative agency focused on research and development.
+
+TEAM
+
+[Team members load automatically from Contentful]
+
+---
+
+Note: The page will automatically fetch and display:
+- About Us text from Contentful
+- Team member list with hover effects
+- Profile pictures and bios
+- Circular text with contact info
+
+No manual setup required!
+

@@ -2,8 +2,16 @@
   Product template - Product Details
 {% endcomment %}
 
+<div class="product-page-wrapper" style="position: relative; top: 40px; min-height: calc(100vh - 40px); display: flex; flex-direction: column;">
 <div class="breadcrumb-container">
-  <a href="{{ routes.collections_url }}" class="breadcrumb-link">Product List</a>
+  {% comment %} Automatically link to 'all' collection or first available collection {% endcomment %}
+  {% if collections.all %}
+    <a href="{{ collections.all.url }}" class="breadcrumb-link">Product List</a>
+  {% elsif shop.collections.size > 0 %}
+    <a href="{{ shop.collections.first.url }}" class="breadcrumb-link">Product List</a>
+  {% else %}
+    <a href="{{ routes.collections_url }}" class="breadcrumb-link">Product List</a>
+  {% endif %}
   <span class="breadcrumb-arrow">→</span>
   <span class="breadcrumb-current">{{ product.title }}</span>
 </div>
@@ -33,13 +41,8 @@
     {% comment %} Desktop Description {% endcomment %}
     <div class="desktop-description">
       <div class="product-description">
-        {% assign description_items = product.description | split: '-' %}
-        {% for item in description_items %}
-          {% assign trimmed_item = item | strip %}
-          {% if trimmed_item != blank %}
-            <div class="description-item">{{ trimmed_item }}</div>
-          {% endif %}
-        {% endfor %}
+        {% comment %} Render description as HTML - Shopify product descriptions are already HTML {% endcomment %}
+        {{ product.description }}
       </div>
     </div>
 
@@ -52,13 +55,14 @@
       {% comment %} Size Selection {% endcomment %}
       <div class="sizes-container">
         {% for option in product.options_with_values %}
-          {% if option.name == 'Size' %}
+          {% if option.name == 'Size' or option.name == 'size' or option.name == 'SIZE' %}
             {% for value in option.values %}
               <button 
                 type="button" 
                 class="size-button" 
                 data-size="{{ value }}"
-                onclick="selectSize('{{ value }}')"
+                data-option-index="{{ forloop.parentloop.index0 }}"
+                data-value-index="{{ forloop.index0 }}"
               >
                 {{ value }}
               </button>
@@ -97,13 +101,8 @@
     {% comment %} Mobile Description {% endcomment %}
     <div class="mobile-order-wrapper">
       <div class="product-description">
-        {% assign description_items = product.description | split: '-' %}
-        {% for item in description_items %}
-          {% assign trimmed_item = item | strip %}
-          {% if trimmed_item != blank %}
-            <div class="description-item">{{ trimmed_item }}</div>
-          {% endif %}
-        {% endfor %}
+        {% comment %} Render description as HTML - Shopify product descriptions are already HTML {% endcomment %}
+        {{ product.description }}
       </div>
     </div>
 
@@ -119,6 +118,9 @@
     </div>
   </div>
 </div>
+</div>
+
+<div class="product-page-spacer" style="flex: 1; min-height: 100px;"></div>
 
 {{ 'products.css' | asset_url | stylesheet_tag }}
 
@@ -127,7 +129,35 @@
   let selectedSize = '';
   let selectedVariantId = '';
 
-  function selectSize(size) {
+  // Initialize size buttons with click handlers
+  document.addEventListener('DOMContentLoaded', function() {
+    const sizeButtons = document.querySelectorAll('.size-button');
+    sizeButtons.forEach(button => {
+      button.addEventListener('click', function(e) {
+        selectSize(this.dataset.size, this);
+      });
+    });
+    
+    // Auto-select first variant if only one variant exists
+    if (product.variants.length === 1 && product.variants[0].available) {
+      const firstVariant = product.variants[0];
+      selectedVariantId = firstVariant.id;
+      document.getElementById('selected-variant-id').value = firstVariant.id;
+      document.getElementById('addToCartButton').disabled = false;
+      
+      // Highlight the size button if there's a size option
+      if (firstVariant.option1) {
+        const matchingButton = Array.from(sizeButtons).find(btn => 
+          btn.dataset.size.toLowerCase() === firstVariant.option1.toLowerCase()
+        );
+        if (matchingButton) {
+          matchingButton.classList.add('selected');
+        }
+      }
+    }
+  });
+
+  function selectSize(size, buttonElement) {
     selectedSize = size;
     
     // Remove selected class from all buttons
@@ -136,17 +166,33 @@
     });
     
     // Add selected class to clicked button
-    event.target.classList.add('selected');
+    if (buttonElement) {
+      buttonElement.classList.add('selected');
+    }
     
-    // Find matching variant
+    // Find matching variant - check all option positions
     const variant = product.variants.find(v => {
-      return v.options.some(opt => opt.toLowerCase() === size.toLowerCase());
+      if (!v.available) return false;
+      // Check if any of the variant's options match the selected size
+      return v.option1 && v.option1.toLowerCase() === size.toLowerCase() ||
+             v.option2 && v.option2.toLowerCase() === size.toLowerCase() ||
+             v.option3 && v.option3.toLowerCase() === size.toLowerCase();
     });
     
     if (variant) {
       selectedVariantId = variant.id;
       document.getElementById('selected-variant-id').value = variant.id;
-      document.getElementById('addToCartButton').disabled = false;
+      const addToCartButton = document.getElementById('addToCartButton');
+      if (addToCartButton) {
+        addToCartButton.disabled = false;
+      }
+    } else {
+      // No variant found - disable add to cart
+      const addToCartButton = document.getElementById('addToCartButton');
+      if (addToCartButton) {
+        addToCartButton.disabled = true;
+      }
+      showFeedback('This size is not available', 'error');
     }
   }
 
@@ -223,22 +269,38 @@
       .catch(error => console.error('Error updating cart count:', error));
   }
 
-  // Desktop scroll locking logic
-  if (window.innerWidth > 768) {
-    const imageSection = document.getElementById('imageSection');
-    const summarySection = document.getElementById('productSummary');
-    
-    if (imageSection && summarySection) {
-      imageSection.addEventListener('scroll', function() {
-        const imageScrollTop = imageSection.scrollTop;
-        const imageScrollHeight = imageSection.scrollHeight - imageSection.clientHeight;
+  // Desktop scroll locking logic - matches React exactly
+  function setupScrollLocking() {
+    if (window.innerWidth > 768) {
+      const imageSection = document.getElementById('imageSection');
+      const summarySection = document.getElementById('productSummary');
+      
+      if (imageSection && summarySection) {
+        const handleScroll = () => {
+          const imageScrollTop = imageSection.scrollTop;
+          const imageScrollHeight = imageSection.scrollHeight - imageSection.clientHeight;
+          
+          // Lock summary scroll until images are fully scrolled
+          if (imageScrollTop < imageScrollHeight) {
+            summarySection.scrollTop = 0;
+          }
+        };
         
-        if (imageScrollTop < imageScrollHeight) {
-          summarySection.scrollTop = 0;
-        }
-      });
+        imageSection.addEventListener('scroll', handleScroll, { passive: true });
+        
+        // Cleanup on resize
+        window.addEventListener('resize', function cleanup() {
+          if (window.innerWidth <= 768) {
+            imageSection.removeEventListener('scroll', handleScroll);
+            window.removeEventListener('resize', cleanup);
+          }
+        });
+      }
     }
   }
+
+  // Initialize scroll locking
+  setupScrollLocking();
 
   // Dispatch cart update event
   document.dispatchEvent(new CustomEvent('cart:updated'));
